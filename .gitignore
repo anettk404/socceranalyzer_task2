@@ -1,0 +1,7 @@
+.env
+data/chroma_db/
+data/soccer.db
+__pycache__/
+*.pyc
+.venv/
+.DS_Store

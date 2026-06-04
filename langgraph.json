@@ -1,0 +1,6 @@
+{
+  "graphs": {
+    "soccer_analyzer": "agents.orchestrator:app"
+  },
+  "dependencies": ["."]
+}
