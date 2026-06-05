@@ -9,8 +9,8 @@ DB_PATH = "data/soccer.db"
 
 # Module aus demselben Verzeichnis importieren
 sys.path.insert(0, os.path.dirname(__file__))
-import data.structured_data.load_openliga as load_openliga
-import data.structured_data.load_statsbomb as load_statsbomb
+import load_openliga
+import load_statsbomb
 
 
 def main():
