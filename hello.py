@@ -1,1 +1,0 @@
-print("Hello from socceranalyzer_task2!")
