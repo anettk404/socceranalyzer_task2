@@ -16,3 +16,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+clustering1.py
+retrieval.py
+cluster_test.png
