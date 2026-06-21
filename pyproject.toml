@@ -34,10 +34,6 @@ dependencies = [
     "matplotlib>=3.10.9",
     "scikit-learn>=1.9.0",
     "wikipedia-api>=0.15.0",
-<<<<<<< HEAD
-=======
     "statsbombpy>=1.19.0",
-    "wikipedia-api>=0.15.0"
-
->>>>>>> 75d8c608a88a6d72bb4b5ddf8f4b306a24a8165c
+    "ragas==0.2.9",
 ]
