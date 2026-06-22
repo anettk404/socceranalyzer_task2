@@ -108,9 +108,10 @@ app = build_graph()
 
 if __name__ == "__main__":
     test_questions = [
-        "Wer steht gerade auf Platz 1 der Bundesliga im Jahre 2023?",
-        "Wie hoch ist der xG-Wert von Erling Haaland in der Champions League?",
+        #"Wer steht gerade auf Platz 1 der Bundesliga im Jahre 2023?",
+        #"Wie hoch ist der xG-Wert von Erling Haaland in der Champions League?",
         "Welche Teams aus der aktuellen Bundesliga-Tabelle kommen auch in den StatsBomb-Matches vor?",
+        "Welche Titel hat Juventus FC gewonnen?",
     ]
     empty_state = {"question": "", "route": "", "route_reason": "", "sql": "", "sub_answers": [], "steps": [], "answer": ""}
     for q in test_questions:

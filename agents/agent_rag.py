@@ -1,12 +1,73 @@
-from .shared import GraphState
+import os
+
+from langchain_core.messages import HumanMessage, SystemMessage
+from llama_index.embeddings.openai import OpenAIEmbedding
+from pinecone import Pinecone
+
+from .shared import llm, PROMPTS, GraphState
+
+_pc: Pinecone | None = None
+_index = None
+_embed_model: OpenAIEmbedding | None = None
+
+INDEX_NAME     = "gensocceranalyzer-wikipedia"
+EMBEDDING_MODEL = "text-embedding-3-small"
+TOP_K          = 5
+
+
+def _get_pinecone_index():
+    global _pc, _index
+    if _index is None:
+        _pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
+        _index = _pc.Index(INDEX_NAME)
+    return _index
+
+
+def _get_embed_model() -> OpenAIEmbedding:
+    global _embed_model
+    if _embed_model is None:
+        _embed_model = OpenAIEmbedding(
+            model=EMBEDDING_MODEL,
+            api_key=os.environ["OPENAI_API_KEY"],
+        )
+    return _embed_model
+
+
+def _retrieve(question: str) -> str:
+    embed_model = _get_embed_model()
+    index = _get_pinecone_index()
+
+    query_vector = embed_model.get_query_embedding(question)
+    results = index.query(vector=query_vector, top_k=TOP_K, include_metadata=True)
+
+    if not results["matches"]:
+        return "Keine relevanten Dokumente gefunden."
+
+    chunks = []
+    for match in results["matches"]:
+        meta = match["metadata"]
+        text = meta.get("text", "").strip()
+        team = meta.get("team", "")
+        liga = meta.get("liga", "")
+        chunks.append(f"[{team} – {liga}]\n{text}")
+
+    return "\n\n---\n\n".join(chunks)
 
 
 def rag_agent(state: GraphState) -> GraphState:
-    """RAG-Agent auf Basis von Chroma-Vektordatenbank (Wikipedia). Noch nicht implementiert."""
-    sub_answer = (
-        "Hintergrundinformationen aus der Wissensdatenbank sind noch nicht verfügbar "
-        "(Chroma-Index wird in einem späteren Schritt befüllt)."
-    )
+    """Retrieval-Agent: sucht relevante Wikipedia-Chunks aus Pinecone und formuliert eine Antwort."""
+    context = _retrieve(state["question"])
+
+    messages = [
+        SystemMessage(content=PROMPTS["rag"]["system"]),
+        HumanMessage(content=(
+            f"Frage: {state['question']}\n\n"
+            f"Relevante Wikipedia-Ausschnitte:\n{context}"
+        )),
+    ]
+    response = llm.invoke(messages)
+    sub_answer = response.content.strip()
+
     return {
         **state,
         "sub_answers": state["sub_answers"] + [f"[rag] {sub_answer}"],
