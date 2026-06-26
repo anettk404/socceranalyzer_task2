@@ -36,6 +36,8 @@ Frage: {state['question']}"""
     return {
         **state,
         "sql": sql,
+        "sql_result": db_result,
         "sub_answers": state["sub_answers"] + [f"[openligadb] {sub_answer}"],
         "steps": state["steps"] + ["openligadb"],
+        "active_agent": "openligadb",
     }

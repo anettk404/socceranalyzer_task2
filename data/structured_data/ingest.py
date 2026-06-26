@@ -32,7 +32,13 @@ def main():
         for table in ["openliga_matches", "openliga_table", "statsbomb_matches", "statsbomb_events"]:
             cur.execute(f"SELECT COUNT(*) FROM {table}")
             count = cur.fetchone()[0]
-            print(f"  {table:<25} {count:>6} Zeilen")
+            print(f"  {table:<25} {count:>8} Zeilen")
+        # Saisons pro Tabelle anzeigen
+        print("\nSaisons in der DB:")
+        for table, col in [("openliga_matches", "season"), ("statsbomb_matches", "season_label")]:
+            cur.execute(f"SELECT DISTINCT {col} FROM {table} ORDER BY {col}")
+            saisons = [r[0] for r in cur.fetchall()]
+            print(f"  {table:<25} {saisons}")
 
     finally:
         con.close()

@@ -36,6 +36,8 @@ Frage: {state['question']}"""
     return {
         **state,
         "sql": sql,
+        "sql_result": db_result,
         "sub_answers": state["sub_answers"] + [f"[statsbomb] {sub_answer}"],
         "steps": state["steps"] + ["statsbomb"],
+        "active_agent": "statsbomb",
     }

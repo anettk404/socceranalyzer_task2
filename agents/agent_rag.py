@@ -72,4 +72,5 @@ def rag_agent(state: GraphState) -> GraphState:
         **state,
         "sub_answers": state["sub_answers"] + [f"[rag] {sub_answer}"],
         "steps": state["steps"] + ["rag"],
+        "active_agent": "rag",
     }

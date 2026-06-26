@@ -112,10 +112,14 @@ if __name__ == "__main__":
         #"Wie hoch ist der xG-Wert von Erling Haaland in der Champions League?",
         "Welche Teams aus der aktuellen Bundesliga-Tabelle kommen auch in den StatsBomb-Matches vor?",
         "Welche Titel hat Juventus FC gewonnen?",
+        "Welcher Spieler hat den höchsten xG-Wert in der Bundesliga 2023/24?",
+        "Wie viele Tore hat Harry Kane per Kopf erzielt?",
+        "Welche Teams haben die meisten Schüsse abgegeben?",
     ]
-    empty_state = {"question": "", "route": "", "route_reason": "", "sql": "", "sub_answers": [], "steps": [], "answer": ""}
+    empty_state = {"question": "", "route": "", "route_reason": "", "sql": "", "sql_result": "", "sub_answers": [], "steps": [], "active_agent": "", "answer": "", "confidence": 0.0}
     for q in test_questions:
         print(f"\nFrage: {q}")
         result = app.invoke({**empty_state, "question": q})
-        print(f"  → Steps:   {result['steps']}")
-        print(f"  → Antwort: {result['answer']}")
+        print(f"  → Steps:      {result['steps']}")
+        print(f"  → Confidence: {result['confidence']:.0%}")
+        print(f"  → Antwort:    {result['answer']}")

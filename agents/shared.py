@@ -28,4 +28,7 @@ class GraphState(TypedDict):
     sql: str
     sub_answers: list[str]  # Teilergebnisse der einzelnen Agenten
     steps: list[str]         # welche Agenten schon aufgerufen wurden
+    active_agent: str        # aktuell aktiver Agent (für Frontend-Anzeige)
+    sql_result: str          # Rohdaten aus der DB (JSON), für Validator-Fact-Check
     answer: str
+    confidence: float        # 0.0–1.0, vom Validator gesetzt
