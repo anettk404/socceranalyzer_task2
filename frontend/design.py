@@ -21,9 +21,14 @@ import streamlit as st
 #-------------------------------------------------
 # Integration weiterer Funktionen aus anderen .py-Dateien
 #-------------------------------------------------
-from tab_statistics import render_statistics
-from tab_clustering import render_clustering_tab
-from tab_chat import render_chat_tab
+try:
+    from .tab_statistics import render_statistics
+    from .tab_clustering import render_clustering_tab
+    from .tab_chat import render_chat_tab
+except ImportError:  # Fallback, wenn die Datei direkt aus dem Ordner gestartet wird
+    from tab_statistics import render_statistics
+    from tab_clustering import render_clustering_tab
+    from tab_chat import render_chat_tab
 
 
 #-------------------------------------------------
@@ -41,6 +46,90 @@ st.set_page_config(
 
 # CSS für schönes Layout, Gestaltung von Farbe, Größe, Abstand, Form, Schriftart, nicht nur einfache, unformatierte Schrift
 # .stab erzeugt CSS-Klassen
+
+LIGA_OPTIONS = ["Alle Ligen", "1. Bundesliga", "La Liga", "Premier League", "Serie A", "Ligue 1"]
+BUNDESLIGA_TEAMS = [
+    "Alle Teams",
+    "FC Bayern München",
+    "Borussia Dortmund",
+    "Bayer 04 Leverkusen",
+    "RB Leipzig",
+    "VfB Stuttgart",
+    "Eintracht Frankfurt",
+    "SC Freiburg",
+    "TSG Hoffenheim",
+    "VfL Wolfsburg",
+    "Borussia Mönchengladbach",
+    "FC Augsburg",
+    "Mainz 05",
+    "Werder Bremen",
+    "1. FC Heidenheim",
+    "1. FC Union Berlin",
+    "VfL Bochum",
+    "SV Darmstadt 98",
+]
+LA_LIGA_TEAMS = [
+    "Alle Teams",
+    "Real Madrid",
+    "FC Barcelona",
+    "Atlético Madrid",
+    "Sevilla FC",
+    "Villarreal CF",
+    "Real Sociedad",
+    "Athletic Club",
+    "Valencia CF",
+    "Celta Vigo",
+]
+PREMIER_LEAGUE_TEAMS = [
+    "Alle Teams",
+    "Manchester City",
+    "Liverpool FC",
+    "Arsenal FC",
+    "Chelsea FC",
+    "Manchester United",
+    "Tottenham Hotspur",
+    "Newcastle United",
+    "Aston Villa",
+    "Leicester City",
+]
+SERIE_A_TEAMS = [
+    "Alle Teams",
+    "Inter Mailand",
+    "Juventus Turin",
+    "AC Mailand",
+    "AS Rom",
+    "SSC Neapel",
+    "Atalanta Bergamo",
+    "Lazio Rom",
+    "Fiorentina",
+    "Bologna FC",
+]
+LIGUE_1_TEAMS = [
+    "Alle Teams",
+    "Paris Saint-Germain",
+    "Olympique Marseille",
+    "Olympique Lyon",
+    "AS Monaco",
+    "LOSC Lille",
+    "Stade Rennais",
+    "AJ Auxerre",
+    "RC Lens",
+    "FC Nantes",
+]
+TEAM_OPTIONS_BY_LIGA = {
+    "Alle Ligen": ["Alle Teams"],
+    "1. Bundesliga": BUNDESLIGA_TEAMS,
+    "La Liga": LA_LIGA_TEAMS,
+    "Premier League": PREMIER_LEAGUE_TEAMS,
+    "Serie A": SERIE_A_TEAMS,
+    "Ligue 1": LIGUE_1_TEAMS,
+}
+
+
+def get_team_options_for_liga(liga: str) -> list[str]:
+    """Gibt die Team-Optionen für die ausgewählte Liga zurück."""
+    return TEAM_OPTIONS_BY_LIGA.get(liga, ["Alle Teams"])
+
 
 st.markdown("""
 <style>
@@ -96,7 +185,7 @@ with tab_stats:
 
         liga = st.selectbox(
             "Liga",
-            ["1. Bundesliga", "Champions League"],
+            LIGA_OPTIONS,
             key="stats_liga"
         )
 
@@ -106,22 +195,12 @@ with tab_stats:
             key="stats_saison"
         )
 
+        team_options = get_team_options_for_liga(liga)
         team = st.selectbox(
             "Team",
-            [
-                "Alle Teams",
-                "FC Bayern München",
-                "Borussia Dortmund",
-                "Bayer 04 Leverkusen"
-            ],
+            team_options,
             key="stats_team"
         )
-
-        st.subheader("Datenquellen")
-
-        st.checkbox("Wikipedia", value=True, key="stats_wiki")
-        st.checkbox("StatsBomb", value=True, key="stats_statsbomb")
-        st.checkbox("OpenLigaDB", value=True, key="stats_openliga")
 
     render_statistics(
         liga=liga,
@@ -135,54 +214,6 @@ with tab_stats:
 # -------------------------------------------------
 
 with tab_clustering:
-
-    with st.sidebar:
-
-        st.subheader("Filter")
-
-        liga = st.selectbox(
-            "Liga",
-            ["1. Bundesliga", "Champions League"],
-            key="cluster_liga"
-        )
-
-        st.selectbox(
-            "Saison",
-            ["Alle Saisons"],
-            disabled=True,
-            key="cluster_saison"
-        )
-
-        st.selectbox(
-            "Team",
-            ["Alle Teams"],
-            disabled=True,
-            key="cluster_team"
-        )
-
-        st.subheader("Datenquelle")
-
-        st.checkbox(
-            "Wikipedia",
-            value=True,
-            disabled=True,
-            key="cluster_wiki"
-        )
-
-        st.checkbox(
-            "StatsBomb",
-            value=False,
-            disabled=True,
-            key="cluster_statsbomb"
-        )
-
-        st.checkbox(
-            "OpenLigaDB",
-            value=False,
-            disabled=True,
-            key="cluster_openliga"
-        )
-
     render_clustering_tab()
 
 

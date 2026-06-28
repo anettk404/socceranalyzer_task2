@@ -2,7 +2,7 @@
 haeufigkeiten_wortwolken.py
 
 Erzeugt eine JSON-Datei mit den Worthäufigkeiten aus Wikipedia-Artikeln
-für eine Liste von Fußballvereinen.
+für alle nationalen Fußballligen.
 
 Ausführen:
     uv run python haeufigkeiten_wortwolken.py
@@ -12,31 +12,45 @@ import json
 import os
 from collections import Counter
 import spacy
-import wikipediaapi
 from pathlib import Path
 
 
 # ─────────────────────────────────────────────────────────────
-# Schritt 1: Definition zum Laden von Wikipedia-Texten
+# Schritt 1: Wikipedia-Artikel zu allen fünf Ligen aus wikipedia_articles.json beziehen
 # ─────────────────────────────────────────────────────────────
-def lade_wiki_texte(teams: list, sprache: str = "de") -> dict:
-    """Lädt die rohen Textinhalte der Wikipedia-Seiten für eine Liste von Teams."""
-    wiki = wikipediaapi.Wikipedia(
-        user_agent="GenSoccerAnalyzer/1.0", language=sprache
-    )
+# Wesentliche Schritte: 
+# 1. JSON-Datei öffnen und einlesen
+# 2. Durch jeden Artikel-Eintrag iterieren
+# 3. Aus jedem Eintrag den Teamnamen und den Text holen
+# 4. Ein Dictionary {team_name: text} zurückgeben
+
+
+def lade_wiki_texte_aus_json(pfad: str) -> dict:
+    """
+    Liest die von wikipedia_collector.py bereits gesammelten Artikel
+    (alle 5 europäischen Top-Ligen) aus der JSON-Datei ein.
+    Bevorzugt den deutschen Text (text_de), fällt sonst auf
+    den englischen Text (text_en) zurück.
+    """
+    with open(pfad, "r", encoding="utf-8") as f:
+        artikel = json.load(f)
+
     texte = {}
-    for team in teams:
-        seite = wiki.page(team)
-        if seite.exists():
-            texte[team] = seite.text
-            print(f"✓ {team} geladen ({len(seite.text)} Zeichen)")
+    for eintrag in artikel:
+        team_name = eintrag.get("team", "")
+        text = eintrag.get("text_de", "").strip() or eintrag.get("text_en", "")
+        if team_name and text:
+            texte[team_name] = text
+            print(f"✓ {team_name} geladen ({len(text)} Zeichen)")
         else:
-            print(f"✗ {team} nicht gefunden")
+            print(f"✗ Kein Text für: {team_name or '?'}")
+
     return texte
 
 
+
 # ─────────────────────────────────────────────────────────────
-# Schritt 2 & 3: Preprocessing (Bereinigen) und Zählen
+# Schritt 2: Preprocessing (Bereinigen) und Zählen
 # ─────────────────────────────────────────────────────────────
 def bereinige_und_zaehle(texte: dict) -> dict:
     """Bereinigt die Texte (entfernt Stopwörter, Satzzeichen, Zahlen, Leerzeichen)
@@ -78,7 +92,7 @@ def bereinige_und_zaehle(texte: dict) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────
-# Schritt 5: Speichern der Ergebnisse
+# Schritt 3: Speichern der Ergebnisse
 # ─────────────────────────────────────────────────────────────
 
 def speichere_haeufigkeiten(daten: dict, ausgabe_datei: str):
@@ -99,45 +113,27 @@ def speichere_haeufigkeiten(daten: dict, ausgabe_datei: str):
 # Hauptablauf (Main)
 # ─────────────────────────────────────────────────────────────
 def main():
-    # Die 18 Bundesliga-Vereine mit ihren exakten Wikipedia-Seitennamen
-    teams = [
-        "FC Bayern München",
-        "Borussia Dortmund",
-        "Bayer 04 Leverkusen",
-        "RB Leipzig",
-        "Eintracht Frankfurt",
-        "VfB Stuttgart",
-        "SC Freiburg",
-        "1. FC Union Berlin",
-        "Borussia Mönchengladbach",
-        "Werder Bremen",
-        "TSG 1899 Hoffenheim",
-        "FC Augsburg",
-        "VfL Bochum",
-        "1. FSV Mainz 05",
-        "VfL Wolfsburg",
-        "1. FC Heidenheim",
-        "FC St. Pauli",
-        "Holstein Kiel"
-    ]
-
+    
     # 1. Ermittle den Ordner, in dem dieses Skript liegt (Tab1_Statistiken)
     skript_ordner = Path(__file__).resolve().parent
     
     # 2. Gehe eine Ebene höher ins Hauptverzeichnis (Root) und setze den Pfad auf data/tab1_statistik/
     haupt_verzeichnis = skript_ordner.parent
+    eingabe_pfad = str(haupt_verzeichnis / "data" / "wikipedia_articles.json")
     ausgabe_pfad = str(haupt_verzeichnis / "data" / "tab1_statistik" / "haeufigkeiten_wortwolken.json")
 
     print("=== Starte Wikipedia NLP-Pipeline ===")
     print(f"Ziel-Pfad: {ausgabe_pfad}")
-    print(f"Lade Daten für {len(teams)} Vereine. Bitte warten...")
+    print(f"Lese Artikel aus: {eingabe_pfad}")
 
     # 1. Schritt: Wikipedia-Texte laden
-    rohtext_daten = lade_wiki_texte(teams)
+    rohtext_daten = lade_wiki_texte_aus_json(eingabe_pfad)
 
     if not rohtext_daten:
         print("Abbruch: Keine Texte von Wikipedia geladen.")
         return
+    
+    print(f"✓ {len(rohtext_daten)} Teams aus allen Ligen geladen")
 
     # 2. & 3. Schritt: Bereinigen und Häufigkeiten zählen
     haeufigkeiten_daten = bereinige_und_zaehle(rohtext_daten)

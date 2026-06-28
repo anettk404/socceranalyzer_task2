@@ -16,6 +16,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+try:
+    from helpers import load_wordcloud_frequencies, zeige_wortwolke
+except ImportError:  # pragma: no cover - fallback for different execution contexts
+    from frontend.helpers import load_wordcloud_frequencies, zeige_wortwolke
+
 #-----------------------------------------------------
 # Import weiterer Funktionen aus anderen .py-Dateien
 #-----------------------------------------------------
@@ -37,18 +42,22 @@ def render_kpi_card(label: str, value: str | int, unit: str = "", source: str = 
             st.caption(f"📊 {source}")
 
 
-def render_wordcloud_placeholder(source: str = "", disabled: bool = False):
-    """Placeholder für Wortwolke. Kann ausgegraut werden."""
+def render_wordcloud_placeholder(source: str = "", disabled: bool = False, team_name: str = ""):
+    """Zeigt eine echte Wortwolke für das ausgewählte Team an."""
     opacity = "0.4" if disabled else "1"
+    selected_team = team_name if team_name and team_name != "Alle Teams" else "FC Bayern München"
+
+    st.markdown("### Word Cloud aus Wikipedia")
     with st.container(border=True):
-        st.markdown(f"<div style='opacity: {opacity}'>", unsafe_allow_html=True)
-        if source:
-            st.caption(f"📊 {source}")
-        st.subheader("Word Cloud")
-        if not disabled:
-            st.info("Wortwolke wird hier eingefügt")
-        else:
+        st.markdown(f"<div style='opacity: {opacity};'>", unsafe_allow_html=True)
+        if disabled:
             st.info("Datenquelle nicht aktiviert")
+        else:
+            frequencies = load_wordcloud_frequencies(selected_team)
+            if frequencies:
+                zeige_wortwolke(frequencies, titel=selected_team)
+            else:
+                st.info(f"Für {selected_team} sind keine Wortwolken-Daten verfügbar.")
         st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -60,19 +69,8 @@ def render_comparison_chart(team_name: str, all_teams: list = None):
     # Filter aus anderen Teams
     other_teams = [t for t in all_teams if t != team_name]
     
-    # Oben: Filter
-    col_top_left, col_top_right = st.columns(2)
-    
-    with col_top_left:
-        st.write(f"**Team: {team_name}**")
-    
-    with col_top_right:
-        selected_team = st.selectbox("Team vergleichen mit:", other_teams, key="compare_team")
-    
-    st.markdown("")
-    
-    # Unten: Charts mit drei verschiedenen Grüntönen
-    col_chart1, col_chart2 = st.columns(2)
+    top_left, top_right = st.columns(2, gap="medium")
+    bottom_left, bottom_right = st.columns(2, gap="medium")
     
     # Farben für die drei Metriken
     color_map = {
@@ -81,7 +79,49 @@ def render_comparison_chart(team_name: str, all_teams: list = None):
         "Gegentore": "#2d5a27"    # Dunkles Grün
     }
     
-    with col_chart1:
+    with top_left:
+        with st.container(border=True):
+            st.markdown(f"**Team:** {team_name}")
+
+    with top_right:
+        with st.container(border=True):
+            filter_label_col, filter_input_col = st.columns([1, 2], gap="small")
+
+            with filter_label_col:
+                st.markdown("<div style='padding-top: 0.45rem; font-weight: 600;'>Liga</div>", unsafe_allow_html=True)
+            with filter_input_col:
+                selected_liga = st.selectbox(
+                    "Liga",
+                    ["1. Bundesliga", "La Liga", "Premier League", "Serie A", "Ligue 1"],
+                    key="compare_liga",
+                    label_visibility="collapsed",
+                )
+
+            filter_label_col, filter_input_col = st.columns([1, 2], gap="small")
+
+            with filter_label_col:
+                st.markdown("<div style='padding-top: 0.45rem; font-weight: 600;'>Saison</div>", unsafe_allow_html=True)
+            with filter_input_col:
+                selected_saison = st.selectbox(
+                    "Saison",
+                    ["2022/23", "2023/24", "2024/25"],
+                    key="compare_saison",
+                    label_visibility="collapsed",
+                )
+
+            filter_label_col, filter_input_col = st.columns([1, 2], gap="small")
+
+            with filter_label_col:
+                st.markdown("<div style='padding-top: 0.45rem; font-weight: 600;'>Team</div>", unsafe_allow_html=True)
+            with filter_input_col:
+                selected_team = st.selectbox(
+                    "Team",
+                    other_teams,
+                    key="compare_team",
+                    label_visibility="collapsed",
+                )
+
+    with bottom_left:
         chart_data = pd.DataFrame({
             "Metrik": ["Tore", "Chancen", "Gegentore"],
             "Wert": [45, 62, 28]
@@ -95,8 +135,8 @@ def render_comparison_chart(team_name: str, all_teams: list = None):
         )
         fig.update_layout(height=350, xaxis_title="", yaxis_title="", showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
-    
-    with col_chart2:
+
+    with bottom_right:
         chart_data = pd.DataFrame({
             "Metrik": ["Tore", "Chancen", "Gegentore"],
             "Wert": [38, 55, 32]
@@ -132,8 +172,6 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
     # ===== BEREICH 1: KPIs & Wortwolke =====
     st.markdown("### Übersicht")
     
-    col_left, col_right = st.columns([1, 2], gap="medium")
-    
     # Definiere Quellen für jedes Element
     elements_sources = {
         "Platz": "OpenligaDB",
@@ -141,18 +179,23 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         "Siege": "OpenligaDB",
         "WordCloud": "Wikipedia"
     }
-    
-    with col_left:
-        for label, value, unit in [("Platz", 1, "."), ("Punkte", 75, "Pkt"), ("Siege", 24, "")]:
+
+    kpi_labels = [("Platz", 1, "."), ("Punkte", 75, "Pkt"), ("Siege", 24, "")]
+    kpi_cols = st.columns(3, gap="small")
+    for index, (label, value, unit) in enumerate(kpi_labels):
+        with kpi_cols[index]:
             source = elements_sources[label]
             is_disabled = source not in sources_selected
             render_kpi_card(label, value, unit, source=source, disabled=is_disabled)
-    
-    with col_right:
-        is_disabled = elements_sources["WordCloud"] not in sources_selected
-        render_wordcloud_placeholder(source=elements_sources["WordCloud"], disabled=is_disabled)
-    
-    st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3;'>", unsafe_allow_html=True)
+
+    st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3; margin-top: 1rem; margin-bottom: 1rem;'>", unsafe_allow_html=True)
+
+    is_disabled = elements_sources["WordCloud"] not in sources_selected
+    render_wordcloud_placeholder(
+        source=elements_sources["WordCloud"],
+        disabled=is_disabled,
+        team_name=team
+    )
     
     # ===== BEREICH 2: Thematische KPI-Paare =====
     st.markdown(f"### Leistung - {team} · {liga} · {saison}")
