@@ -38,4 +38,5 @@ dependencies = [
     "ragas==0.2.9",
     "spacy>=3.8.14",
     "plotly>=6.8.0",
+    "playwright>=1.60.0",
 ]
