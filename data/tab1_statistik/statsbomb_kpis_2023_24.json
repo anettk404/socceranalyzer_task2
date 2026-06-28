@@ -1,0 +1,110 @@
+{
+    "FC Bayern München": {
+        "Verein": "FC Bayern München",
+        "Chancen_Qualitaet_xG": 2.8,
+        "Tor_Effizienz_Delta": -0.8,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "Bayer 04 Leverkusen": {
+        "Verein": "Bayer 04 Leverkusen",
+        "Chancen_Qualitaet_xG": 72.7,
+        "Tor_Effizienz_Delta": 13.3,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "Borussia Dortmund": {
+        "Verein": "Borussia Dortmund",
+        "Chancen_Qualitaet_xG": 1.4,
+        "Tor_Effizienz_Delta": 0.6,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "VfB Stuttgart": {
+        "Verein": "VfB Stuttgart",
+        "Chancen_Qualitaet_xG": 4.2,
+        "Tor_Effizienz_Delta": -1.2,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "RB Leipzig": {
+        "Verein": "RB Leipzig",
+        "Chancen_Qualitaet_xG": 2.8,
+        "Tor_Effizienz_Delta": 1.2,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "Eintracht Frankfurt": {
+        "Verein": "Eintracht Frankfurt",
+        "Chancen_Qualitaet_xG": 1.6,
+        "Tor_Effizienz_Delta": -0.6,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "TSG 1899 Hoffenheim": {
+        "Verein": "TSG 1899 Hoffenheim",
+        "Chancen_Qualitaet_xG": 0.0,
+        "Tor_Effizienz_Delta": 0.0,
+        "Druck_Resistenz_Prozent": 0.0
+    },
+    "1. FC Heidenheim": {
+        "Verein": "1. FC Heidenheim",
+        "Chancen_Qualitaet_xG": 0.0,
+        "Tor_Effizienz_Delta": 0.0,
+        "Druck_Resistenz_Prozent": 0.0
+    },
+    "SV Werder Bremen": {
+        "Verein": "SV Werder Bremen",
+        "Chancen_Qualitaet_xG": 0.9,
+        "Tor_Effizienz_Delta": -0.9,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "SC Freiburg": {
+        "Verein": "SC Freiburg",
+        "Chancen_Qualitaet_xG": 1.7,
+        "Tor_Effizienz_Delta": 1.3,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "FC Augsburg": {
+        "Verein": "FC Augsburg",
+        "Chancen_Qualitaet_xG": 1.1,
+        "Tor_Effizienz_Delta": -0.1,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "VfL Wolfsburg": {
+        "Verein": "VfL Wolfsburg",
+        "Chancen_Qualitaet_xG": 1.4,
+        "Tor_Effizienz_Delta": -0.4,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "1. FSV Mainz 05": {
+        "Verein": "1. FSV Mainz 05",
+        "Chancen_Qualitaet_xG": 0.0,
+        "Tor_Effizienz_Delta": 0.0,
+        "Druck_Resistenz_Prozent": 0.0
+    },
+    "Borussia Mönchengladbach": {
+        "Verein": "Borussia Mönchengladbach",
+        "Chancen_Qualitaet_xG": 1.0,
+        "Tor_Effizienz_Delta": -1.0,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "1. FC Union Berlin": {
+        "Verein": "1. FC Union Berlin",
+        "Chancen_Qualitaet_xG": 0.6,
+        "Tor_Effizienz_Delta": -0.6,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "VfL Bochum": {
+        "Verein": "VfL Bochum",
+        "Chancen_Qualitaet_xG": 0.6,
+        "Tor_Effizienz_Delta": -0.6,
+        "Druck_Resistenz_Prozent": 100.0
+    },
+    "1. FC Köln": {
+        "Verein": "1. FC Köln",
+        "Chancen_Qualitaet_xG": 0.0,
+        "Tor_Effizienz_Delta": 0.0,
+        "Druck_Resistenz_Prozent": 0.0
+    },
+    "SV Darmstadt 98": {
+        "Verein": "SV Darmstadt 98",
+        "Chancen_Qualitaet_xG": 0.0,
+        "Tor_Effizienz_Delta": 0.0,
+        "Druck_Resistenz_Prozent": 0.0
+    }
+}
