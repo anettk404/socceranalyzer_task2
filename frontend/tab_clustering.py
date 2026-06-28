@@ -1,203 +1,157 @@
 # -----------------------------------------------
-# tab_clustering.py – Clustering-Tab (Design & Test)
+# tab_clustering.py
 # -----------------------------------------------
 
+import sys
+import os
 import streamlit as st
-import matplotlib.pyplot as plt
+import plotly.express as px
 import pandas as pd
-import numpy as np
 
-# Versuche den echten Service zu laden. Wenn er fehlt, nutzen wir Mock-Daten für den Design-Test.
-try:
-    from pipeline.analytics_service import load_and_calculate_clustering
-    ECHTE_PIPELINE_VORHANDEN = True
-except ModuleNotFoundError:
-    ECHTE_PIPELINE_VORHANDEN = False
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from Clustering.clustering import load_articles, run_clustering, get_top_terms_per_cluster, label_clusters
 
 
-def generiere_mock_daten(k_wert):
-    """Erzeugt realistische Testdaten für das Layout-Testing."""
-    vereine = [
-        "FC Bayern München", "Borussia Dortmund", "Bayer 04 Leverkusen",
-        "RB Leipzig", "Eintracht Frankfurt", "VfB Stuttgart",
-        "SC Freiburg", "1. FC Union Berlin", "Borussia Mönchengladbach",
-        "Werder Bremen", "TSG 1899 Hoffenheim", "FC Augsburg"
-    ]
+
+CLUSTER_COLORS = ["#2ecc71", "#3b82f6", "#f39c12", "#9b59b6", "#e74c3c"]
+CLUSTER_EMOJIS = ["🟢", "🔵", "🟠", "🟣", "🔴"]
 
 
-# ------------------------------------------------------------------------
-# Schaubild für t-SNE erzeugen
-# ------------------------------------------------------------------------
-    
-    # Koordinatensystem: Zufällige, aber feste X/Y Koordinaten für das Diagramm erzeugen
-    np.random.seed(42)
-    x_koordinaten = np.random.randn(len(vereine)) * 5
-    y_koordinaten = np.random.randn(len(vereine)) * 5
-    # Vereine gleichmäßig auf Cluster aufteilen
-    cluster_zuordnung = [i % k_wert for i in range(len(vereine))]
-    
-    df = pd.DataFrame({
-        "Verein": vereine,
-        "x": x_koordinaten,
-        "y": y_koordinaten,
-        "Zugeordnetes Cluster": cluster_zuordnung
-    })
-    
-    # Beispielbegriffe für das Topic Modeling
-    beispiel_begriffe = ["saison", "meister", "gewinnen", "bundesliga", "trainer", "stadion", "dfb-pokal", "tor"] # Echte Daten anbi
-    
-    insights = {}
-    for i in range(k_wert):
-        insights[i] = {
-            "label": f"Tradition & Erfolgsgruppe {i+1}",
-            "vereine": [vereine[j] for j in range(len(vereine)) if cluster_zuordnung[j] == i],
-            "begriffe": [beispiel_begriffe[(i+j) % len(beispiel_begriffe)] for j in range(4)]
+@st.cache_data(show_spinner=False)
+def lade_clustering_daten(k_wert: int) -> tuple[pd.DataFrame, dict]:
+    articles = load_articles()
+    df_raw, X, vectorizer = run_clustering(articles, n_clusters=k_wert)
+    top_terms = get_top_terms_per_cluster(X, df_raw["cluster"].values, vectorizer)
+
+    try:
+        cluster_labels = label_clusters(top_terms)
+    except Exception:
+        cluster_labels = {cid: f"Cluster {cid}" for cid in top_terms}
+
+    df_raw["cluster_label"] = df_raw["cluster"].map(cluster_labels)
+
+    insights = {
+        cid: {
+            "label": cluster_labels.get(cid, f"Cluster {cid}"),
+            "vereine": df_raw[df_raw["cluster"] == cid]["team"].tolist(),
+            "begriffe": top_terms.get(cid, [])[:6],
         }
-        
-    return df, insights
+        for cid in sorted(top_terms.keys())
+    }
+
+    return df_raw, insights
 
 
 def render_clustering_tab():
-
-    st.caption("Clustering der Wikipedia-Daten")
-
-    # Werte aus dem Haupt-Session-State abrufen
-    pipeline_aktiv = st.session_state.get("pipeline_aktiv", False)
-    generate_answer_func = st.session_state.get("generate_answer_func", None)
-
-    # Schieberegler für k-Wert (2 bis 5)
-    k_wert = st.slider("Anzahl der Cluster (k)", min_value=2, max_value=5, value=3)
-
-    # CSS-Styling für den Schieberegler (Schiene + Punkt grün, Zahlen dunkel) und die Begriffe
     st.markdown("""
     <style>
-        /* 1. Der bewegliche Punkt (Slider Handle) */
-        div[data-testid="stSlider"] div[role="slider"] {
-            background-color: #2d5a27 !important;
-            border-color: #2d5a27 !important;
-            box-shadow: none !important;
+        .cluster-badge {
+            display: inline-block; padding: 2px 10px; border-radius: 12px;
+            font-size: 0.78rem; font-weight: 600; margin: 2px 3px 0 0;
         }
-        
-        /* 2. NUR die aktive Schiene (Linie links vom Punkt) grün färben */
-        div[data-testid="stSlider"] [data-baseweb="slider"] > div > div > div:first-child {
-            background-color: #2d5a27 !important;
+        .cluster-header {
+            display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;
         }
-        
-        /* Sicherheits-Fallback für die rote Schiene, falls Streamlit Inline-Styles nutzt */
-        div[data-testid="stSlider"] [style*="background-color: rgb(255)"],
-        div[data-testid="stSlider"] [style*="background: rgb(255)"] {
-            background-color: #2d5a27 !important;
+        .cluster-title { font-weight: 700; font-size: 1rem; }
+        .cluster-subtitle {
+            background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
+            padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;
         }
-
-        /* 3. EXPLIZIT die Zahlen (über und unter der Linie) wieder dunkel und lesbar machen */
-        div[data-testid="stSlider"] [data-testid="stWidgetLabel"],             /* Text über dem Slider */
-        div[data-testid="stSlider"] [data-baseweb="slider"] + div,             /* Aktueller Wert über dem Punkt */
-        div[data-testid="stSlider"] [data-baseweb="slider"] ~ div div {        /* Skala/Nummerierung unter der Linie */
-            color: #1a1a18 !important;
-            -webkit-text-fill-color: #1a1a18 !important; /* Verhindert, dass Browser Farben überschreiben */
+        .cluster-card {
+            background: white; border: 1px solid #e5e7eb; border-radius: 10px;
+            padding: 0.9rem 1rem; margin-bottom: 0.6rem;
         }
-
-        /* 4. Begriffe (Code-Tags) verkleinern, damit sie in eine Zeile passen */
-        div[data-testid="stMarkdownContainer"] code {
-            font-size: 11px !important;       
-            padding: 2px 6px !important;      
-            letter-spacing: -0.2px !important; 
-            white-space: nowrap !important;   
+        .cluster-card-label { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.3rem; }
+        .cluster-card-teams { font-size: 0.78rem; color: #6b7280; margin-bottom: 0.4rem; }
+        .term-pill {
+            display: inline-block; background: #f3f4f6; color: #374151;
+            border-radius: 8px; padding: 1px 8px; font-size: 0.72rem;
+            margin: 2px 2px 0 0; border: 1px solid #e5e7eb;
+        }
+        .filter-label {
+            font-size: 0.72rem; font-weight: 600; color: #6b7280;
+            letter-spacing: 0.05em; margin-bottom: 4px; margin-top: 1rem;
         }
     </style>
     """, unsafe_allow_html=True)
 
-    with st.spinner("Lade Wikipedia-Daten und berechne K-Means & t-SNE live im RAM..."):
-        try:
-            # Wenn die echte Datei existiert, nimm diese, ansonsten die Design-Testdaten
-            if ECHTE_PIPELINE_VORHANDEN:
-                ergebnis_df, cluster_insights = load_and_calculate_clustering(
-                    k_wert=k_wert, 
-                    pipeline_aktiv=pipeline_aktiv, 
-                    generate_answer_func=generate_answer_func
+    col_sidebar, col_main = st.columns([1, 2.8])
+
+    with col_sidebar:
+        st.markdown('<div class="filter-label">CLUSTER-ANZAHL</div>', unsafe_allow_html=True)
+        k_wert = st.slider("Cluster-Anzahl (k)", min_value=2, max_value=5, value=3,
+                           label_visibility="collapsed", key="cluster_k")
+
+        st.markdown('<div class="filter-label">DATENQUELLE</div>', unsafe_allow_html=True)
+        st.checkbox("Wikipedia (Vereinsartikel)", value=True, disabled=True, key="cluster_wiki2")
+        st.checkbox("StatsBomb", value=False, disabled=True, key="cluster_statsbomb2")
+        st.checkbox("OpenLigaDB", value=False, disabled=True, key="cluster_openliga2")
+
+    with col_main:
+        st.markdown("""
+        <div class="cluster-header">
+            <span class="cluster-title">Vereins-Clustering</span>
+            <span class="cluster-subtitle">TF-IDF + KMeans + LLM-Labels</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.spinner("Berechne Clustering..."):
+            try:
+                df, insights = lade_clustering_daten(k_wert)
+            except Exception as e:
+                st.error(f"Fehler beim Laden der Daten: {e}")
+                return
+
+        df["Farbe"] = df["cluster"].map(lambda c: CLUSTER_COLORS[c % len(CLUSTER_COLORS)])
+        df["Label"] = df["cluster"].map(lambda c: insights.get(c, {}).get("label", f"Cluster {c}"))
+
+        col_plot, col_cards = st.columns([1.6, 1])
+
+        with col_plot:
+            fig = px.scatter(
+                df,
+                x="x", y="y",
+                color="Label",
+                hover_name="team",
+                hover_data={"liga": True, "x": False, "y": False, "Label": False},
+                color_discrete_sequence=CLUSTER_COLORS,
+                height=480,
+            )
+            fig.update_traces(
+                marker=dict(size=11, line=dict(width=1.5, color="#ffffff")),
+                selector=dict(mode="markers"),
+            )
+            fig.update_layout(
+                plot_bgcolor="#f9fafb",
+                paper_bgcolor="#f9fafb",
+                xaxis=dict(showticklabels=False, showgrid=False, zeroline=False, title=""),
+                yaxis=dict(showticklabels=False, showgrid=False, zeroline=False, title=""),
+                legend=dict(
+                    title="Cluster",
+                    orientation="h",
+                    yanchor="bottom", y=-0.25,
+                    xanchor="left", x=0,
+                    font=dict(size=11),
+                ),
+                margin=dict(l=10, r=10, t=10, b=60),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col_cards:
+            for cid in sorted(insights.keys()):
+                info = insights[cid]
+                color = CLUSTER_COLORS[cid % len(CLUSTER_COLORS)]
+                emoji = CLUSTER_EMOJIS[cid % len(CLUSTER_EMOJIS)]
+                teams_str = ", ".join(info["vereine"][:4])
+                if len(info["vereine"]) > 4:
+                    teams_str += f" +{len(info['vereine']) - 4}"
+                begriffe_html = "".join(
+                    f'<span class="term-pill">{b}</span>' for b in info["begriffe"]
                 )
-            else:
-                # Automatischer Fallback für die Design-Vorschau
-                ergebnis_df, cluster_insights = generiere_mock_daten(k_wert)
-
-            # ─────────────────────────────────────────────────────────────
-            # NEUES LAYOUT: Zwei Spalten nebeneinander
-            # ─────────────────────────────────────────────────────────────
-            col_graph, col_details = st.columns([6, 4])
-            
-            # --- LINKS: Schaubild für die Cluster (t-SNE) ---
-            with col_graph:
-                st.subheader("Cluster-Schaubild")
-                
-                diagramm_hoehe = 3 + (k_wert * 1.2)
-
-                fig, ax = plt.subplots(
-                figsize=(6, diagramm_hoehe),
-                facecolor="#f7f7f5"
-                )
-
-                ax.set_facecolor('#f7f7f5')
-                colors = ["#ff4b4b", "#0068c9", "#83c83f", "#fca000", "#7d44b7"]
-                
-                for cluster_idx in sorted(ergebnis_df["Zugeordnetes Cluster"].unique()):
-                    cluster_data = ergebnis_df[ergebnis_df["Zugeordnetes Cluster"] == cluster_idx]
-                    label_text = cluster_insights.get(cluster_idx, {}).get("label", f"Cluster {cluster_idx}")
-                    
-                    ax.scatter(
-                        cluster_data["x"], cluster_data["y"], 
-                        label=label_text, color=colors[cluster_idx % len(colors)], 
-                        s=150, edgecolors="#222222", zorder=3
-                    )
-                    
-                for i, team_name in enumerate(ergebnis_df["Verein"]):
-                    ax.annotate(
-                        team_name, (ergebnis_df["x"].iloc[i], ergebnis_df["y"].iloc[i]), 
-                        xytext=(5, 5), textcoords="offset points", fontsize=9
-                    )
-                    
-                ax.set_xticks([])
-                ax.set_yticks([])
-                ax.spines['top'].set_visible(False)
-                ax.spines['right'].set_visible(False)
-                plt.legend(loc="upper left", bbox_to_anchor=(0, -0.05), frameon=False, fontsize=9)
-                st.pyplot(
-                    fig,
-                    use_container_width=True
-                )
-
-
-                
-               # --- RECHTS: Cluster-Details (Aufgeteilt in 5 Felder) ---
-            with col_details:
-                st.subheader("Cluster-Analysen")
-                
-                # Farb-Emojis passend zur Reihenfolge im Matplotlib-Schaubild
-                cluster_emojis = ["🔴", "🔵", "🟢", "🟡", "🟣"]
-
-                # Feste Höhe für alle Boxen
-                box_hoehe = 110
-                
-                # Die 5 Felder für die Cluster-Insights (wird dynamisch befüllt)
-                for i in range(k_wert):
-                    with st.container(border=True):
-                        # Wenn das Cluster laut Slider aktuell existiert, zeige die echten Daten an
-                        if i in cluster_insights:
-                            insights = cluster_insights[i]
-                            emoji = cluster_emojis[i % len(cluster_emojis)]
-                            
-                            # 1) Titel mit der passenden Farbkugel statt dem Ordnersymbol
-                            st.markdown(f"**{emoji} Cluster {i}: {insights['label']}**")
-                            
-                            # 2) Die Vereine darunter wurden weggelassen (Platz gespart)
-                            # Zeige nur noch die Top-Wörter/Themenbegriffe
-                            st.markdown(f"`{' · '.join(insights['begriffe'])}`")
-                        else:
-                            # Platzhalter für inaktive Felder
-                            st.markdown(f"**🔒 Feld {i+3}: Cluster inaktiv**")
-                            st.caption("Erhöhe die Cluster-Anzahl am Slider, um dieses Feld zu aktivieren.")
-
-        except Exception as e:
-            st.error(f"Fehler bei der Berechnung oder Darstellung: {e}")
-
-                        
-          
+                st.markdown(f"""
+                <div class="cluster-card" style="border-left: 4px solid {color};">
+                    <div class="cluster-card-label">{emoji} {info['label']}</div>
+                    <div class="cluster-card-teams">{teams_str}</div>
+                    <div>{begriffe_html}</div>
+                </div>
+                """, unsafe_allow_html=True)
