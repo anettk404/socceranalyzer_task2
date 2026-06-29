@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from Tab1_Statistiken.statsbomb_collector_statistics_tab import (  # noqa: E402
+from services.stats_kpi_service import (  # noqa: E402
     load_statsbomb_kpis_from_db,
     normalize_openliga_season_label,
     normalize_openliga_team_name,
@@ -92,15 +92,50 @@ def get_available_seasons(liga: str) -> list[str]:
     if "season" not in columns:
         return ["Alle Saisons", "2024/25", "2023/24", "2022/23"]
 
-    query = "SELECT DISTINCT season FROM openliga_table"
+    where_sql = ""
     params: tuple = ()
     if liga not in (None, "", "Alle Ligen") and "league" in columns:
-        query += " WHERE league = ?"
+        where_sql = " WHERE league = ?"
         params = (liga,)
-    query += " ORDER BY season DESC"
 
     with sqlite3.connect(DB_PATH) as conn:
-        seasons = [row[0] for row in conn.execute(query, params).fetchall()]
+        if "matches" in columns:
+            season_rows = conn.execute(
+                f"""
+                SELECT season, MAX(matches) AS max_team_matches
+                FROM openliga_table
+                {where_sql}
+                GROUP BY season
+                ORDER BY season DESC
+                """,
+                params,
+            ).fetchall()
+
+            if season_rows:
+                best_matches = max(int(row[1] or 0) for row in season_rows)
+                minimum_matches = max(1, int(best_matches * 0.9))
+                seasons = [row[0] for row in season_rows if int(row[1] or 0) >= minimum_matches]
+            else:
+                seasons = []
+        else:
+            seasons = [
+                row[0]
+                for row in conn.execute(
+                    f"SELECT DISTINCT season FROM openliga_table{where_sql} ORDER BY season DESC",
+                    params,
+                ).fetchall()
+            ]
+
+    # Fallback: if filtering removed everything, keep legacy behavior.
+    if not seasons:
+        with sqlite3.connect(DB_PATH) as conn:
+            seasons = [
+                row[0]
+                for row in conn.execute(
+                    f"SELECT DISTINCT season FROM openliga_table{where_sql} ORDER BY season DESC",
+                    params,
+                ).fetchall()
+            ]
 
     return ["Alle Saisons", *seasons] if seasons else ["Alle Saisons"]
 
@@ -181,6 +216,7 @@ def load_top_kpis_from_db(liga: str, saison: str, team_name: str) -> dict | None
             "team",
             "position",
             "points",
+            "matches" if "matches" in columns else "0 AS matches",
             "won",
             "lost",
             "goals_for",
@@ -207,7 +243,9 @@ def load_top_kpis_from_db(liga: str, saison: str, team_name: str) -> dict | None
         "team": row["team"],
         "Platz": int(row["position"]),
         "Punkte": int(row["points"]),
+        "Spiele": int(row["matches"]),
         "Siege": int(row["won"]),
+        "Unentschieden": max(int(row["matches"]) - int(row["won"]) - int(row["lost"]), 0),
         "Niederlagen": int(row["lost"]),
         "Tore": int(row["goals_for"]),
         "Gegentore": int(row["goals_against"]),
@@ -284,8 +322,8 @@ def _build_comparison_figure(
     shared_y_max: float,
 ):
     plot_data = chart_data.copy()
-    min_visible_bar = max(shared_y_max * 0.04, 0.6)
-    plot_data["Anzeigewert"] = plot_data["Wert"].apply(lambda value: min_visible_bar if value == 0 else value)
+    # Render exact KPI values; zero must stay zero to avoid misleading bar heights.
+    plot_data["Anzeigewert"] = plot_data["Wert"]
     plot_data["Wert_Label"] = plot_data["Wert"].apply(lambda value: f"{value:.1f}" if isinstance(value, float) else str(value))
 
     fig = px.bar(
@@ -339,33 +377,8 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
 
     with top_right:
         with st.container(border=True):
-            compare_liga_options = [entry for entry in get_available_leagues() if entry != "Alle Ligen"]
-            compare_liga_index = compare_liga_options.index(liga) if liga in compare_liga_options else 0
-
-            filter_label_col, filter_input_col = st.columns([1, 2], gap="small")
-
-            with filter_label_col:
-                st.markdown("<div style='padding-top: 0.45rem; font-weight: 600;'>Liga</div>", unsafe_allow_html=True)
-            with filter_input_col:
-                selected_liga = st.selectbox(
-                    "Liga",
-                    compare_liga_options,
-                    key="compare_liga",
-                    index=compare_liga_index,
-                    label_visibility="collapsed",
-                )
-
-            filter_label_col, filter_input_col = st.columns([1, 2], gap="small")
-
-            with filter_label_col:
-                st.markdown("<div style='padding-top: 0.45rem; font-weight: 600;'>Saison</div>", unsafe_allow_html=True)
-            with filter_input_col:
-                selected_saison = st.selectbox(
-                    "Saison",
-                    get_available_seasons(selected_liga)[1:] or ["2022/23", "2023/24", "2024/25"],
-                    key="compare_saison",
-                    label_visibility="collapsed",
-                )
+            selected_liga = liga
+            selected_saison = saison
 
             compare_team_options = [
                 candidate
@@ -388,6 +401,8 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
                     label_visibility="collapsed",
                 )
 
+            st.caption(f"Vergleich in gleicher Liga/Saison: {selected_liga} · {selected_saison}")
+
     right_chart_data, right_kpis = _build_comparison_chart_data(selected_liga, selected_saison, selected_team)
     left_label = left_kpis["team"] if left_kpis else team_name
     right_label = right_kpis["team"] if right_kpis else selected_team
@@ -402,8 +417,6 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
             shared_y_max,
         )
         st.plotly_chart(fig, use_container_width=True)
-        if (left_chart_data["Wert"] == 0).any():
-            st.caption("Nullwerte werden als schmale Vergleichsbalken dargestellt.")
         if left_kpis and left_kpis["Chancenverwertung"] is None:
             st.caption("Für dieses Team liegen in StatsBomb aktuell keine Vergleichsdaten vor.")
 
@@ -415,8 +428,6 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
             shared_y_max,
         )
         st.plotly_chart(fig, use_container_width=True)
-        if (right_chart_data["Wert"] == 0).any():
-            st.caption("Nullwerte werden als schmale Vergleichsbalken dargestellt.")
         if right_kpis and right_kpis["Chancenverwertung"] is None:
             st.caption("Für dieses Vergleichsteam liegen in StatsBomb aktuell keine Vergleichsdaten vor.")
 
@@ -437,6 +448,10 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
     
     # Liste der aktivierten Quellen erstellen
     sources_selected = [source for source, enabled in sources_enabled.items() if enabled]
+
+    if saison in (None, "", "Alle Saisons"):
+        st.info("Bitte waehle eine konkrete Saison aus. Mit 'Alle Saisons' sind KPI-Werte nicht eindeutig interpretierbar.")
+        return
     
     # ===== BEREICH 1: KPIs & Wortwolke =====
     st.markdown("### Übersicht")
@@ -470,6 +485,11 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
 
     if kpi_data and team == "Alle Teams":
         st.caption(f"KPI-Werte zeigen aktuell: {kpi_data['team']} · {kpi_data['league']} · {kpi_data['season']}")
+    if kpi_data:
+        st.caption(
+            f"Datenstand OpenLigaDB: {kpi_data['Spiele']} Spiele · "
+            f"{kpi_data['Siege']}S/{kpi_data['Unentschieden']}U/{kpi_data['Niederlagen']}N"
+        )
 
     st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3; margin-top: 1rem; margin-bottom: 1rem;'>", unsafe_allow_html=True)
 
@@ -523,5 +543,5 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
     st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3;'>", unsafe_allow_html=True)
     
     # ===== BEREICH 3: Team-Vergleich =====
-    st.markdown(f"### Team-Vergleich - {team} · {liga} · {saison}")
+    st.markdown(f"### Team-Vergleich · {liga} · {saison}")
     render_comparison_chart(team, liga, saison, ["Bayern", "Dortmund", "Leverkusen", "Mainz", "Leipzig"])

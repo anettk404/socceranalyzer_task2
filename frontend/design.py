@@ -118,10 +118,12 @@ with tab_stats:
         )
 
         saison_options = tab_statistics.get_available_seasons(liga)
+        default_saison_index = 1 if len(saison_options) > 1 else 0
 
         saison = st.selectbox(
             "Saison",
             saison_options,
+            index=default_saison_index,
             key="stats_saison"
         )
 

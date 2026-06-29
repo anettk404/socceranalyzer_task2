@@ -60,7 +60,7 @@ def _normalize_wordcloud_team_name(team_name: str) -> str:
 
 def load_wordcloud_frequencies(team_name: str = "", data_path: str | Path | None = None) -> dict:
     """Lädt die Wortwolken-Häufigkeiten für ein Team aus der JSON-Datei."""
-    resolved_path = Path(data_path) if data_path else ROOT_DIR / "data" / "tab1_statistik" / "haeufigkeiten_wortwolken.json"
+    resolved_path = Path(data_path) if data_path else ROOT_DIR / "data" / "haeufigkeiten_wortwolken.json"
 
     if not resolved_path.exists():
         return {}
