@@ -21,6 +21,8 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
+import re
+import unicodedata
 
 import matplotlib.pyplot as plt
 import streamlit as st
@@ -31,6 +33,29 @@ except ImportError:  # pragma: no cover - optional dependency
     WordCloud = None
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+
+_WORDCLOUD_TEAM_ALIASES = {
+    "fc bayern munchen": "fc bayern munich",
+    "bayern munchen": "fc bayern munich",
+    "bayern muenchen": "fc bayern munich",
+    "1 fc heidenheim 1846": "1 fc heidenheim",
+    "1 fc heidenheim": "1 fc heidenheim",
+    "mainz 05": "1 fsv mainz 05",
+    "fsv mainz 05": "1 fsv mainz 05",
+    "real madrid": "real madrid cf",
+    "paris saint germain": "paris saint germain fc",
+    "psg": "paris saint germain fc",
+}
+
+
+def _normalize_wordcloud_team_name(team_name: str) -> str:
+    normalized = unicodedata.normalize("NFKD", team_name or "")
+    normalized = normalized.encode("ascii", "ignore").decode("ascii").lower()
+    normalized = normalized.replace("&", " und ")
+    normalized = re.sub(r"[^a-z0-9]+", " ", normalized)
+    normalized = re.sub(r"\b(cf|fc|sc|sv|ac|as|ssc|vfl|tsg|rb|bv|e v)\b", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return _WORDCLOUD_TEAM_ALIASES.get(normalized, normalized)
 
 
 def load_wordcloud_frequencies(team_name: str = "", data_path: str | Path | None = None) -> dict:
@@ -44,18 +69,19 @@ def load_wordcloud_frequencies(team_name: str = "", data_path: str | Path | None
         data = json.load(handle)
 
     if not team_name:
-        return next(iter(data.values()), {})
+        return {}
 
-    normalized_team = team_name.strip().lower()
+    normalized_team = _normalize_wordcloud_team_name(team_name)
     for key, frequencies in data.items():
-        if key.strip().lower() == normalized_team:
+        if _normalize_wordcloud_team_name(key) == normalized_team:
             return frequencies
 
     for key, frequencies in data.items():
-        if normalized_team in key.strip().lower() or key.strip().lower() in normalized_team:
+        normalized_key = _normalize_wordcloud_team_name(key)
+        if normalized_team and (normalized_team in normalized_key or normalized_key in normalized_team):
             return frequencies
 
-    return next(iter(data.values()), {})
+    return {}
 
 
 def zeige_wortwolke(haeufigkeiten: dict, titel: str = "") -> None:
