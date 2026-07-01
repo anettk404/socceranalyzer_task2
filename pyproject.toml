@@ -36,4 +36,6 @@ dependencies = [
     "wikipedia-api>=0.15.0",
     "statsbombpy>=1.19.0",
     "ragas==0.2.9",
+    "beautifulsoup4>=4.14.3",
+    "tabulate>=0.10.0",
 ]
