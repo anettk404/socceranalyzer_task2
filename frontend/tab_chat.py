@@ -1,5 +1,14 @@
+# -----------------------------------------------
+# tab_chat.py
+# -----------------------------------------------
+
+import sys
+import os
 import time
 import streamlit as st
+
+# Pfad zum Projekt-Root hinzufügen, damit agents/ importiert werden kann
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from agents.orchestrator import app as graph
 
 EMPTY_STATE = {
@@ -48,88 +57,40 @@ BEISPIEL_FRAGEN = [
 ]
 
 AGENT_STEPS = [
-    ("supervisor",   "Supervisor analysiert Frage"),
-    ("openligadb",   "OpenLigaDB-Agent lädt Tabellendaten"),
-    ("statsbomb",    "StatsBomb-Agent lädt Event-Daten"),
-    ("combined",     "Combined-Agent verbindet Datenquellen"),
-    ("rag",          "Wikipedia-Agent sucht Hintergrundwissen"),
-    ("aggregator",   "Aggregator fasst Teilergebnisse zusammen"),
-    ("validator",    "Validator prüft Antwort"),
+    ("supervisor",  "Supervisor analysiert Frage"),
+    ("openligadb",  "OpenLigaDB-Agent lädt Tabellendaten"),
+    ("statsbomb",   "StatsBomb-Agent lädt Event-Daten"),
+    ("combined",    "Combined-Agent verbindet Datenquellen"),
+    ("rag",         "Wikipedia-Agent sucht Hintergrundwissen"),
+    ("aggregator",  "Aggregator fasst Teilergebnisse zusammen"),
+    ("validator",   "Validator prüft Antwort"),
 ]
 
-st.set_page_config(
-    page_title="GenSoccerAnalyzer",
-    page_icon="⚽",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
-st.markdown("""
-<style>
-    .gsa-header {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0.75rem 1.5rem; background: white;
-        border-bottom: 1px solid #e5e7eb; margin-bottom: 1rem;
-    }
-    .gsa-logo { display: flex; align-items: center; gap: 0.75rem; }
-    .gsa-logo h1 { font-size: 1.25rem; font-weight: 700; margin: 0; color: #111; }
-    .gsa-logo span { font-size: 0.85rem; color: #6b7280; }
-    .status-badge {
-        background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
-        padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
-    }
-    .agent-badge {
-        display: inline-block; padding: 2px 10px; border-radius: 12px;
-        font-size: 0.78rem; font-weight: 500; margin: 2px 3px 0 0;
-    }
-    .conf-high { background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:10px; font-size:0.8rem; }
-    .conf-mid  { background:#fef9c3; color:#a16207; padding:3px 10px; border-radius:10px; font-size:0.8rem; }
-    .conf-low  { background:#fee2e2; color:#b91c1c; padding:3px 10px; border-radius:10px; font-size:0.8rem; }
-    .filter-label { font-size:0.72rem; font-weight:600; color:#6b7280; letter-spacing:0.05em; margin-bottom:4px; }
-    .progress-step { font-size:0.82rem; color:#6b7280; padding: 2px 0; }
-    .progress-step.done { color:#16a34a; }
-    .progress-step.active { color:#1d4ed8; font-weight:600; }
-    div[data-testid="stButton"] button {
-        width:100%; text-align:left; background:white;
-        border:1px solid #e5e7eb; border-radius:8px;
-        padding:6px 12px; font-size:0.85rem; color:#374151; margin-bottom:4px;
-    }
-    div[data-testid="stButton"] button:hover { background:#f9fafb; border-color:#d1d5db; }
-    [data-testid="stChatMessage"] { padding: 0.5rem 0; }
-</style>
-""", unsafe_allow_html=True)
+def render_chat_tab():
+    st.markdown("""
+    <style>
+        .agent-badge {
+            display: inline-block; padding: 2px 10px; border-radius: 12px;
+            font-size: 0.78rem; font-weight: 500; margin: 2px 3px 0 0;
+        }
+        .conf-high { background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:10px; font-size:0.8rem; }
+        .conf-mid  { background:#fef9c3; color:#a16207; padding:3px 10px; border-radius:10px; font-size:0.8rem; }
+        .conf-low  { background:#fee2e2; color:#b91c1c; padding:3px 10px; border-radius:10px; font-size:0.8rem; }
+        .filter-label { font-size:0.72rem; font-weight:600; color:#6b7280; letter-spacing:0.05em; margin-bottom:4px; }
+        .progress-step { font-size:0.82rem; color:#6b7280; padding: 2px 0; }
+        .progress-step.done { color:#16a34a; }
+        .progress-step.active { color:#1d4ed8; font-weight:600; }
+        div[data-testid="stButton"] button {
+            width:100%; text-align:left; background:white;
+            border:1px solid #e5e7eb; border-radius:8px;
+            padding:6px 12px; font-size:0.85rem; color:#374151; margin-bottom:4px;
+        }
+        div[data-testid="stButton"] button:hover { background:#f9fafb; border-color:#d1d5db; }
+        [data-testid="stChatMessage"] { padding: 0.5rem 0; }
+    </style>
+    """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-# HEADER
-# ─────────────────────────────────────────────
-st.markdown("""
-<div class="gsa-header">
-    <div class="gsa-logo">
-        <span style="font-size:1.8rem">⚽</span>
-        <div>
-            <h1>GenSoccerAnalyzer</h1>
-            <span>Powered by LangGraph + RAG</span>
-        </div>
-    </div>
-    <div class="status-badge">● System bereit</div>
-</div>
-""", unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────
-# TABS
-# ─────────────────────────────────────────────
-tab_stats, tab_clustering, tab_chat = st.tabs(["Statistiken", "Clustering", "Chat-Analyse"])
-
-with tab_stats:
-    st.info("Statistik-Tab")
-
-with tab_clustering:
-    st.info("Clustering-Tab")
-
-# ─────────────────────────────────────────────
-# TAB CHAT
-# ─────────────────────────────────────────────
-with tab_chat:
     col_sidebar, col_chat = st.columns([1, 2.8])
 
     with col_sidebar:
@@ -142,9 +103,9 @@ with tab_chat:
                      label_visibility="collapsed", key="team_filter")
 
         st.markdown('<div class="filter-label" style="margin-top:1.2rem">DATENQUELLEN</div>', unsafe_allow_html=True)
-        st.checkbox("StatsBomb (xG, Pässe, Schüsse)", value=True)
-        st.checkbox("OpenLigaDB (Tabelle, Ergebnisse)", value=True)
-        st.checkbox("Wikipedia (Klubgeschichte)", value=True)
+        st.checkbox("StatsBomb (xG, Pässe, Schüsse)", value=True, key="chat_statsbomb")
+        st.checkbox("OpenLigaDB (Tabelle, Ergebnisse)", value=True, key="chat_openliga")
+        st.checkbox("Wikipedia (Klubgeschichte)", value=True, key="chat_wiki")
 
         st.markdown('<div class="filter-label" style="margin-top:1.2rem">BEISPIEL-FRAGEN</div>', unsafe_allow_html=True)
         for bfrage in BEISPIEL_FRAGEN:
@@ -167,7 +128,6 @@ with tab_chat:
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
-        # Reset-Button
         if st.button("Gespräch zurücksetzen", key="reset"):
             st.session_state.messages = []
             st.rerun()
@@ -196,7 +156,6 @@ with tab_chat:
                         st.markdown("**Rohdaten aus der Datenbank:**")
                         st.code(sql_result[:2000], language="json")
 
-        # Chatverlauf anzeigen
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
@@ -204,7 +163,6 @@ with tab_chat:
                     meta = msg["meta"]
                     render_meta(meta["steps"], meta["confidence"], meta.get("sql", ""), meta.get("sql_result", ""))
 
-        # Beispiel-Frage aus Sidebar
         prefill = st.session_state.pop("beispiel_frage", None)
         frage = st.chat_input("Frage auf Deutsch stellen, z.B. Wie steht die Bundesliga?")
         if prefill and not frage:
@@ -216,7 +174,6 @@ with tab_chat:
                 st.markdown(frage)
 
             with st.chat_message("assistant"):
-                # Agent-Fortschrittsanzeige
                 progress_placeholder = st.empty()
 
                 def show_progress(completed_steps: list, active: str) -> None:
@@ -228,7 +185,6 @@ with tab_chat:
                             html += f'<div class="progress-step active">&#9679; {label}...</div>'
                     progress_placeholder.markdown(html, unsafe_allow_html=True)
 
-                # Graph mit stream() ausführen um Zwischenstände zu sehen
                 show_progress([], "supervisor")
                 result = None
                 completed = []
@@ -240,7 +196,6 @@ with tab_chat:
                     if node not in completed:
                         completed.append(node)
 
-                    # nächsten aktiven Schritt bestimmen
                     node_order = [k for k, _ in AGENT_STEPS]
                     next_idx = node_order.index(node) + 1 if node in node_order else -1
                     next_node = node_order[next_idx] if next_idx < len(node_order) else ""
@@ -250,7 +205,6 @@ with tab_chat:
 
                 progress_placeholder.empty()
 
-                # Antwort mit Typing-Effekt ausgeben
                 answer = result.get("answer", "Keine Antwort erhalten.")
                 answer_placeholder = st.empty()
                 displayed = ""

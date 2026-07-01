@@ -1,4 +1,4 @@
-"""StatsBomb loader — 1. Bundesliga, mehrere Saisons mit allen Events."""
+"""StatsBomb loader — mehrere Ligen und Saisons mit allen Events."""
 import sqlite3
 import warnings
 import pandas as pd
@@ -6,11 +6,16 @@ from statsbombpy import sb
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# Saisons: (competition_id, season_id, label)
-SEASONS = [
-    (9, 270, "2022/23"),   # 1. Bundesliga 2022/23
-    (9, 281, "2023/24"),   # 1. Bundesliga 2023/24
-    (9, 282, "2024/25"),   # 1. Bundesliga 2024/25
+# Ligen: (league_label, competition_name, competition_id, default_season_id, season_label)
+COMPETITIONS = [
+    ("1. Bundesliga", "1. Bundesliga", 9, 27, "2015/16"),
+    ("1. Bundesliga", "1. Bundesliga", 9, 281, "2023/24"),
+    ("Premier League", "Premier League", 2, 27, "2015/16"),
+    ("La Liga", "La Liga", 11, 2, "2016/17"),
+    ("Serie A", "Serie A", 12, 27, "2015/16"),
+    ("Ligue 1", "Ligue 1", 7, 27, "2015/16"),
+    ("Ligue 1", "Ligue 1", 7, 108, "2021/22"),
+    ("Ligue 1", "Ligue 1", 7, 235, "2022/23"),
 ]
 
 EVENT_COLS = [
@@ -32,16 +37,33 @@ def _flatten_location(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _season_id_for_label(label: str) -> int | None:
+def _table_exists(con: sqlite3.Connection, table_name: str) -> bool:
+    row = con.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table_name,),
+    ).fetchone()
+    return row is not None
+
+
+def _existing_match_ids(con: sqlite3.Connection, table_name: str, league_label: str, season_label: str) -> set[int]:
+    if not _table_exists(con, table_name):
+        return set()
+    rows = con.execute(
+        f"SELECT DISTINCT match_id FROM {table_name} WHERE league = ? AND season_label = ?",
+        (league_label, season_label),
+    ).fetchall()
+    return {int(row[0]) for row in rows}
+
+
+def _season_id_for_label(competition_name: str, label: str) -> int | None:
     """Sucht die season_id in den verfügbaren StatsBomb-Competitions."""
     try:
         comps = sb.competitions()
-        # StatsBomb-Format: "2023/2024" statt "2023/24"
         start = label.split("/")[0]
         end = f"20{label.split('/')[1]}"
         statsbomb_label = f"{start}/{end}"
         match = comps[
-            (comps["competition_name"] == "1. Bundesliga") &
+            (comps["competition_name"] == competition_name) &
             (comps["season_name"] == statsbomb_label)
         ]
         if not match.empty:
@@ -51,7 +73,7 @@ def _season_id_for_label(label: str) -> int | None:
     return None
 
 
-def fetch_matches_for_season(competition_id: int, season_id: int, label: str) -> pd.DataFrame:
+def fetch_matches_for_season(league_label: str, competition_name: str, competition_id: int, season_id: int, label: str) -> pd.DataFrame:
     matches = sb.matches(competition_id=competition_id, season_id=season_id)
     keep = [
         "match_id", "match_date", "kick_off", "competition", "season",
@@ -64,61 +86,77 @@ def fetch_matches_for_season(competition_id: int, season_id: int, label: str) ->
     for col in ["competition", "season", "referee", "stadium", "home_managers", "away_managers"]:
         if col in df.columns:
             df[col] = df[col].astype(str)
+    df["league"] = league_label
+    df["competition_name"] = competition_name
     df["season_label"] = label
     return df
 
 
-def fetch_events(match_ids: list[int]) -> pd.DataFrame:
-    frames = []
-    for i, mid in enumerate(match_ids, start=1):
-        print(f"    Match {i}/{len(match_ids)} (id={mid}) …", end=" ", flush=True)
-        try:
-            evts = sb.events(match_id=mid)
-            evts["match_id"] = mid
-            cols = [c for c in EVENT_COLS if c in evts.columns]
-            evts = evts[cols].copy()
-            evts = _flatten_location(evts)
-            for col in evts.select_dtypes(include="object").columns:
-                evts[col] = evts[col].astype(str)
-            frames.append(evts)
-            print(f"{len(evts)} Events")
-        except Exception as e:
-            print(f"Fehler: {e}")
-    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+def fetch_events_for_match(match_id: int) -> pd.DataFrame:
+    evts = sb.events(match_id=match_id)
+    evts["match_id"] = match_id
+    cols = [c for c in EVENT_COLS if c in evts.columns]
+    evts = evts[cols].copy()
+    evts = _flatten_location(evts)
+    for col in evts.select_dtypes(include="object").columns:
+        evts[col] = evts[col].astype(str)
+    return evts
 
 
 def save_to_db(con: sqlite3.Connection) -> None:
-    all_matches = []
-    all_events = []
+    wrote_matches = False
+    wrote_events = False
+    total_matches = 0
+    total_events = 0
 
-    for competition_id, season_id_default, label in SEASONS:
-        # season_id dynamisch aus StatsBomb holen (Fallback auf default)
-        season_id = _season_id_for_label(label) or season_id_default
+    for league_label, competition_name, competition_id, season_id_default, label in COMPETITIONS:
+        season_id = _season_id_for_label(competition_name, label) or season_id_default
 
-        print(f"\n  Lade StatsBomb {label} (season_id={season_id})...")
+        print(f"\n  Lade StatsBomb {league_label} {label} (season_id={season_id})...")
         try:
-            matches = fetch_matches_for_season(competition_id, season_id, label)
+            matches = fetch_matches_for_season(league_label, competition_name, competition_id, season_id, label)
             print(f"    → {len(matches)} Matches gefunden")
         except Exception as e:
             print(f"    ⚠ Saison nicht verfügbar: {e}")
             continue
 
-        all_matches.append(matches)
-        match_ids = matches["match_id"].tolist()
+        existing_matches = _existing_match_ids(con, "statsbomb_matches", league_label, label)
+        matches_to_write = matches[~matches["match_id"].isin(existing_matches)].copy()
+        if not matches_to_write.empty:
+            matches_to_write.to_sql("statsbomb_matches", con, if_exists="append" if wrote_matches or _table_exists(con, "statsbomb_matches") else "replace", index=False)
+            wrote_matches = True
+            total_matches += len(matches_to_write)
+        elif _table_exists(con, "statsbomb_matches"):
+            wrote_matches = True
+
+        existing_event_matches = _existing_match_ids(con, "statsbomb_events", league_label, label)
+        match_ids = [match_id for match_id in matches["match_id"].tolist() if match_id not in existing_event_matches]
 
         print(f"    Lade Events für {len(match_ids)} Matches...")
-        events = fetch_events(match_ids)
-        if not events.empty:
-            events["season_label"] = label
-            all_events.append(events)
-            print(f"    → {len(events):,} Events geladen")
+        for index, match_id in enumerate(match_ids, start=1):
+            print(f"    Match {index}/{len(match_ids)} (id={match_id}) …", end=" ", flush=True)
+            try:
+                events = fetch_events_for_match(match_id)
+                if not events.empty:
+                    events["league"] = league_label
+                    events["season_label"] = label
+                    events.to_sql("statsbomb_events", con, if_exists="append" if wrote_events or _table_exists(con, "statsbomb_events") else "replace", index=False)
+                    wrote_events = True
+                    total_events += len(events)
+                    con.commit()
+                    print(f"{len(events)} Events")
+                else:
+                    con.commit()
+                    print("0 Events")
+            except Exception as e:
+                con.commit()
+                print(f"Fehler: {e}")
 
-    if all_matches:
-        df_matches = pd.concat(all_matches, ignore_index=True)
-        df_matches.to_sql("statsbomb_matches", con, if_exists="replace", index=False)
-        print(f"\n  ✓ statsbomb_matches: {len(df_matches)} Zeilen gesamt")
+        if not match_ids:
+            print("    → Alle Events für diese Saison sind bereits vorhanden")
 
-    if all_events:
-        df_events = pd.concat(all_events, ignore_index=True)
-        df_events.to_sql("statsbomb_events", con, if_exists="replace", index=False)
-        print(f"  ✓ statsbomb_events: {len(df_events):,} Zeilen gesamt")
+    if wrote_matches:
+        print(f"\n  ✓ statsbomb_matches: {total_matches} Zeilen gesamt")
+
+    if wrote_events:
+        print(f"  ✓ statsbomb_events: {total_events:,} Zeilen gesamt")

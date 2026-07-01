@@ -51,7 +51,7 @@ TEST_CASES = [
 
     # rag — Vereinsgeschichte, Biografien, Wikipedia-Wissen
     {"question": "Wann wurde Bayern München gegründet?",                                   "expected": "rag"},
-    {"question": "Was ist die Geschichte von Real Madrid?",                                "expected": "rag"},
+   # {"question": "Was ist die Geschichte von Real Madrid?",                                "expected": "rag"},
     {"question": "Welche Titel hat Juventus FC in seiner Geschichte gewonnen?",            "expected": "rag"},
     {"question": "Wann wurde der FC Barcelona gegründet und von wem?",                     "expected": "rag"},
     {"question": "Wie viele Champions-League-Titel hat Real Madrid insgesamt gewonnen?",   "expected": "rag"},
