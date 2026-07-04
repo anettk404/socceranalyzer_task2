@@ -8,6 +8,7 @@ from .db import run_query, SCHEMA
 
 def statsbomb_agent(state: GraphState) -> GraphState:
     """Generiert SQL auf statsbomb_* Tabellen und formuliert eine Antwort."""
+    history_block = f"Gesprächskontext:\n{state.get('chat_history', '')}\n\n" if state.get("chat_history") else ""
     sql_prompt = f"""Du hast Zugriff auf folgende SQLite-Tabellen:
 
 {SCHEMA}
@@ -16,7 +17,7 @@ Generiere ein SQL-SELECT-Query um die folgende Frage zu beantworten.
 Nutze nur die Tabellen statsbomb_matches und statsbomb_events.
 Antworte ausschließlich mit dem SQL-Query, ohne Erklärungen oder Markdown.
 
-Frage: {state['question']}"""
+{history_block}Frage: {state['question']}"""
 
     sql_response = llm.invoke([HumanMessage(content=sql_prompt)])
     sql = sql_response.content.strip().removeprefix("```sql").removesuffix("```").strip()

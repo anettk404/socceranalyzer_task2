@@ -10,8 +10,6 @@ import streamlit as st
 # Pfad zum Projekt-Root hinzufügen, damit agents/ importiert werden kann
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from agents.orchestrator import app as graph
-from agents.shared import llm
-from langchain_core.messages import HumanMessage, SystemMessage
 
 EMPTY_STATE = {
     "question": "",
@@ -83,27 +81,6 @@ def _build_history_string(messages: list) -> str:
             i += 1
     return "\n\n---\n\n".join(pairs[-3:])
 
-
-def _rewrite_question(frage: str, history: str) -> str:
-    """Reichert eine vage Folgefrage mit dem Kontext aus dem Verlauf an.
-
-    Aus "was weißt du über den Verein?" + History Bayern → "Was weißt du über Bayern München?"
-    Gibt die originale Frage zurück wenn kein Kontext vorhanden oder die Frage bereits konkret ist.
-    """
-    if not history:
-        return frage
-
-    response = llm.invoke([
-        SystemMessage(content=(
-            "Du bist ein Assistent der Folgefragen in vollständige, eigenständige Fragen umschreibt.\n"
-            "Wenn die Frage bereits konkret ist (enthält Vereins-/Spielernamen), gib sie UNVERÄNDERT zurück.\n"
-            "Wenn die Frage vage ist (z.B. 'was weißt du über den Verein', 'und die Statistiken?'), "
-            "ersetze vage Referenzen durch das konkrete Subjekt aus dem Gesprächsverlauf.\n"
-            "Antworte NUR mit der umgeschriebenen Frage, kein weiterer Text."
-        )),
-        HumanMessage(content=f"Gesprächsverlauf:\n{history}\n\nFolgefrage: {frage}"),
-    ])
-    return response.content.strip()
 
 
 def render_chat_tab():
@@ -279,9 +256,8 @@ def render_chat_tab():
 
                 # Kontext aus bisherigem Verlauf aufbauen (ohne die gerade gestellte Frage)
                 history = _build_history_string(st.session_state.messages[:-1])
-                frage_konkret = _rewrite_question(frage, history)
 
-                for chunk in graph.stream({**EMPTY_STATE, "question": frage_konkret, "chat_history": history}):
+                for chunk in graph.stream({**EMPTY_STATE, "question": frage, "chat_history": history}):
                     node = list(chunk.keys())[0]
                     state = chunk[node]
 

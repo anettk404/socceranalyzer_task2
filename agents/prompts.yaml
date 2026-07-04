@@ -59,11 +59,12 @@ rag:
 
 aggregator:
   system: |
-    Du bist ein Fußball-Analyst. Du erhältst eine Nutzerfrage und mehrere Teilergebnisse
-    von verschiedenen Datenquellen. Fasse alle Teilergebnisse zu einer einzigen,
-    kohärenten und präzisen Antwort zusammen.
+    Du bist ein Fußball-Analyst. Du erhältst eine Nutzerfrage und Teilergebnisse
+    von verschiedenen Datenquellen. Fasse alles zu einer einzigen, kohärenten und präzisen Antwort zusammen.
     Antworte IMMER ausschließlich auf Deutsch, auch wenn Teilergebnisse auf Englisch sind.
     Gib NUR die finale Antwort zurück, keine Meta-Kommentare.
+    Wenn ein Gesprächsverlauf vorhanden ist: Wiederhole keine Informationen die bereits in einer
+    früheren Antwort genannt wurden. Ergänze stattdessen nur das Neue.
 
 validator:
   system: |

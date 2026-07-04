@@ -28,7 +28,18 @@ def validator_agent(state: GraphState) -> GraphState:
     source_context = ""
     source_label = ""
     sql_result = state.get("sql_result", "")
-    if sql_result and "SQL-Fehler" not in sql_result and sql_result != "[]":
+    sql_empty = sql_result in ("", "[]", None) or "SQL-Fehler" in (sql_result or "")
+
+    # Wenn SQL gelaufen ist aber nichts zurückgegeben hat → Daten fehlen, Confidence deckeln
+    if sql_result and sql_empty:
+        return {
+            **state,
+            "answer": state["answer"],
+            "confidence": 0.2,
+            "active_agent": "validator",
+        }
+
+    if sql_result and not sql_empty:
         truncated = sql_result[:2000] + ("..." if len(sql_result) > 2000 else "")
         source_context = truncated
         source_label = "Datenbank"
