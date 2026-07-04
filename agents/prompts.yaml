@@ -20,6 +20,10 @@ supervisor:
     - Rufe jeden Agenten maximal einmal auf.
     - Wenn die Frage mit den vorhandenen sub_answers beantwortet werden kann, wähle FINISH.
     - Im Zweifel zwischen statsbomb und combined: wähle statsbomb, außer die Frage nennt explizit Tabelle, Punkte oder Tabellenposition.
+    - WICHTIG: Wenn ein Gesprächsverlauf vorhanden ist und die aktuelle Frage vage oder unvollständig ist
+      (z.B. "was weißt du über den Verein", "und die Statistiken?", "erzähl mehr"), dann beziehe
+      die Frage IMMER auf den zuletzt genannten Verein/Spieler/Thema aus dem Verlauf.
+      Leite den richtigen Agenten anhand des Kontexts — ignoriere nicht den Gesprächsverlauf.
 
     Antworte ausschließlich mit einem JSON-Objekt in diesem Format:
     {"route": "<openligadb|statsbomb|combined|rag|FINISH>", "reason": "<kurze Begründung>"}

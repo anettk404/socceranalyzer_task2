@@ -25,8 +25,16 @@ def supervisor(state: GraphState) -> GraphState:
     sub_answers_text = "\n".join(state["sub_answers"]) if state["sub_answers"] else "Noch keine."
     steps_text = ", ".join(state["steps"]) if state["steps"] else "Noch keine."
 
+    history_text = state.get("chat_history", "")
+    history_block = (
+        f"GESPRÄCHSVERLAUF (für Kontext-Auflösung bei vagen Fragen):\n{history_text}\n\n"
+        f"Wenn die aktuelle Frage keinen expliziten Verein/Spieler nennt, "
+        f"beziehe sie auf das zuletzt besprochene Thema im Verlauf.\n\n"
+    ) if history_text else ""
+
     user_content = (
-        f"Originalfrage: {state['question']}\n\n"
+        f"{history_block}"
+        f"Aktuelle Frage: {state['question']}\n\n"
         f"Bereits aufgerufene Agenten: {steps_text}\n\n"
         f"Gesammelte Teilergebnisse:\n{sub_answers_text}"
     )
@@ -116,7 +124,7 @@ if __name__ == "__main__":
         "Wie viele Tore hat Harry Kane per Kopf erzielt?",
         "Welche Teams haben die meisten Schüsse abgegeben?",
     ]
-    empty_state = {"question": "", "route": "", "route_reason": "", "sql": "", "sql_result": "", "sub_answers": [], "steps": [], "active_agent": "", "answer": "", "confidence": 0.0}
+    empty_state = {"question": "", "chat_history": "", "route": "", "route_reason": "", "sql": "", "sql_result": "", "sub_answers": [], "steps": [], "active_agent": "", "answer": "", "confidence": 0.0}
     for q in test_questions:
         print(f"\nFrage: {q}")
         result = app.invoke({**empty_state, "question": q})
