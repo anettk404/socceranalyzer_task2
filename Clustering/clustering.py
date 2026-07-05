@@ -9,7 +9,7 @@ import os
 import json
 import numpy as np
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, ENGLISH_STOP_WORDS
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from dotenv import load_dotenv
@@ -17,6 +17,19 @@ from openai import OpenAI
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+NATIONAL_STOPWORDS = list(frozenset(ENGLISH_STOP_WORDS) | frozenset([
+    # Englisch
+    "premier", "league", "fa", "english", "england", "wembley",
+    # Spanisch
+    "liga", "spanish", "spain", "segunda", "primera", "division", "copa",
+    # Deutsch
+    "bundesliga", "german", "germany", "dfb", "regionalliga", "pokal", "dfl",
+    # Französisch
+    "ligue", "french", "france", "coupe", "lfe",
+    # Italienisch
+    "serie", "italian", "italy", "coppa", "calcio",
+]))
 
 
 # === Daten laden ===
@@ -56,8 +69,8 @@ def run_clustering(
     n_clusters = min(n_clusters, len(data))
 
     vectorizer = TfidfVectorizer(
-        max_features=500,
-        stop_words="english",
+        max_features=1000,
+        stop_words=NATIONAL_STOPWORDS,
         min_df=2,
         max_df=0.85
     )
@@ -112,14 +125,16 @@ def label_clusters(top_terms: dict[int, list[str]]) -> dict[int, str]:
         f"charakterisiert durch die häufigsten Begriffe in ihren Wikipedia-Artikeln:\n\n"
         f"{clusters_text}\n\n"
         f"Gib für jeden Cluster ein kurzes Label (max. 6 Wörter) auf Deutsch, das "
-        f"das gemeinsame THEMA bzw. den TEXTSCHWERPUNKT dieser Artikel beschreibt "
-        f"(z.B. 'Vereine mit Fokus auf Aufstiegsgeschichte').\n\n"
+        f"das gemeinsame THEMA bzw. den TEXTSCHWERPUNKT dieser Artikel beschreibt — "
+        f"z.B. Vereinskultur, Erfolge, Rivalitäten, Stadion, Geschichte.\n\n"
         f"WICHTIG:\n"
-        f"- Beschreibe NIEMALS den aktuellen sportlichen Status oder die "
-        f"aktuelle Liga eines Vereins als Fakt - die Begriffe spiegeln nur "
-        f"wider, worüber die Artikel viel schreiben, nicht den heutigen Stand.\n"
-        f"- Vermeide generische Begriffe wie 'Fußballverein', 'Bundesliga', "
-        f"'Deutschland', die für alle Cluster zutreffen würden.\n"
+        f"- Nenne KEINE Länder, Nationalitäten oder Liganamen (nicht 'deutsch', "
+        f"'italienisch', 'Bundesliga', 'Premier League' etc.) — diese sind für alle "
+        f"Cluster in ihrer Liga gleich und beschreiben kein Muster.\n"
+        f"- Beschreibe stattdessen WAS die Artikel inhaltlich verbindet: "
+        f"z.B. 'Traditionsvereine mit großer Fankultur', 'Vereine mit Fokus auf Nachwuchs', "
+        f"'Stadtrivalen und Pokalhistorie'.\n"
+        f"- Beschreibe NIEMALS den aktuellen sportlichen Status als Fakt.\n"
         f"- Die Labels müssen sich klar voneinander unterscheiden.\n\n"
         f'Antworte NUR als JSON: {{"0": "Label", "1": "Label", ...}}'
     )

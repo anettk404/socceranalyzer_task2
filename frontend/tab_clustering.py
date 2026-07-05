@@ -18,9 +18,16 @@ CLUSTER_EMOJIS = ["🟢", "🔵", "🟠", "🟣", "🔴"]
 
 
 @st.cache_data(show_spinner=False)
-def lade_clustering_daten(k_wert: int) -> tuple[pd.DataFrame, dict]:
+def lade_verfuegbare_ligen() -> list[str]:
     articles = load_articles()
-    df_raw, X, vectorizer = run_clustering(articles, n_clusters=k_wert)
+    return sorted(set(a["liga"] for a in articles if a.get("liga")))
+
+
+@st.cache_data(show_spinner=False)
+def lade_clustering_daten(k_wert: int, liga: str | None = None) -> tuple[pd.DataFrame, dict]:
+    articles = load_articles()
+    ligen_filter = [liga] if liga else None
+    df_raw, X, vectorizer = run_clustering(articles, n_clusters=k_wert, ligen=ligen_filter)
     top_terms = get_top_terms_per_cluster(X, df_raw["cluster"].values, vectorizer)
 
     try:
@@ -61,7 +68,7 @@ def render_clustering_tab():
             background: white; border: 1px solid #e5e7eb; border-radius: 10px;
             padding: 0.9rem 1rem; margin-bottom: 0.6rem;
         }
-        .cluster-card-label { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.3rem; }
+        .cluster-card-label { font-weight: 700; font-size: 0.9rem; color: #6b7280; margin-bottom: 0.3rem; }
         .cluster-card-teams { font-size: 0.78rem; color: #6b7280; margin-bottom: 0.4rem; }
         .term-pill {
             display: inline-block; background: #f3f4f6; color: #374151;
@@ -78,33 +85,48 @@ def render_clustering_tab():
     col_sidebar, col_main = st.columns([1, 2.8])
 
     with col_sidebar:
+        ligen = lade_verfuegbare_ligen()
+        st.markdown('<div class="filter-label">LIGA</div>', unsafe_allow_html=True)
+        liga_auswahl = st.selectbox(
+            "Liga",
+            options=["Alle"] + ligen,
+            index=0,
+            label_visibility="collapsed",
+            key="cluster_liga",
+        )
+        gewaehlte_liga = None if liga_auswahl == "Alle" else liga_auswahl
+
         st.markdown('<div class="filter-label">CLUSTER-ANZAHL</div>', unsafe_allow_html=True)
         k_wert = st.slider("Cluster-Anzahl (k)", min_value=2, max_value=5, value=3,
                            label_visibility="collapsed", key="cluster_k")
-
-        st.markdown('<div class="filter-label">DATENQUELLE</div>', unsafe_allow_html=True)
-        st.checkbox("Wikipedia (Vereinsartikel)", value=True, disabled=True, key="cluster_wiki2")
-        st.checkbox("StatsBomb", value=False, disabled=True, key="cluster_statsbomb2")
-        st.checkbox("OpenLigaDB", value=False, disabled=True, key="cluster_openliga2")
 
     with col_main:
         st.markdown("""
         <div class="cluster-header">
             <span class="cluster-title">Vereins-Clustering</span>
             <span class="cluster-subtitle">TF-IDF + KMeans + LLM-Labels</span>
+            <span class="cluster-subtitle">Wikipedia</span>
         </div>
         """, unsafe_allow_html=True)
 
         with st.spinner("Berechne Clustering..."):
             try:
-                df, insights = lade_clustering_daten(k_wert)
+                df, insights = lade_clustering_daten(k_wert, gewaehlte_liga)
             except Exception as e:
                 st.error(f"Fehler beim Laden der Daten: {e}")
                 return
 
         df["Farbe"] = df["cluster"].map(lambda c: CLUSTER_COLORS[c % len(CLUSTER_COLORS)])
         df["Label"] = df["cluster"].map(lambda c: insights.get(c, {}).get("label", f"Cluster {c}"))
-
+        color_map = {
+            row["Label"]: CLUSTER_COLORS[row["cluster"] % len(CLUSTER_COLORS)]
+            for _, row in df.drop_duplicates("cluster").iterrows()
+        }
+        label_order = [
+            df[df["cluster"] == cid]["Label"].iloc[0]
+            for cid in sorted(insights.keys())
+            if len(df[df["cluster"] == cid]) > 0
+        ]
         col_plot, col_cards = st.columns([1.6, 1])
 
         with col_plot:
@@ -114,7 +136,8 @@ def render_clustering_tab():
                 color="Label",
                 hover_name="team",
                 hover_data={"liga": True, "x": False, "y": False, "Label": False},
-                color_discrete_sequence=CLUSTER_COLORS,
+                color_discrete_map=color_map,
+                category_orders={"Label": label_order},
                 height=480,
             )
             fig.update_traces(
@@ -127,13 +150,16 @@ def render_clustering_tab():
                 xaxis=dict(showticklabels=False, showgrid=False, zeroline=False, title=""),
                 yaxis=dict(showticklabels=False, showgrid=False, zeroline=False, title=""),
                 legend=dict(
-                    title="Cluster",
-                    orientation="h",
-                    yanchor="bottom", y=-0.25,
+                    title=dict(text="    Cluster", font=dict(color="#6b7280", size=11)),
+                    orientation="v",
+                    yanchor="top", y=-0.05,
                     xanchor="left", x=0,
-                    font=dict(size=11),
+                    font=dict(size=11, color="#374151"),
+                    bgcolor="rgba(255,255,255,0.95)",
+                    bordercolor="#d1d5db",
+                    borderwidth=1,
                 ),
-                margin=dict(l=10, r=10, t=10, b=60),
+                margin=dict(l=10, r=10, t=10, b=130),
             )
             st.plotly_chart(fig, use_container_width=True)
 
