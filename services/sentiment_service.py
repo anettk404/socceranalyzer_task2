@@ -9,6 +9,7 @@ Autorin: Annette Kufner
 
 import json
 import pandas as pd
+import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 import unicodedata
 import re
@@ -63,7 +64,16 @@ def get_wikipedia_sentiment_dataframe(file_path="data/wikipedia_articles.json"):
         # Fallback für geänderte Ordnerstrukturen im Live-Betrieb
         return pd.DataFrame()
         
-    sia = SentimentIntensityAnalyzer()
+    try:
+        sia = SentimentIntensityAnalyzer()
+    except LookupError:
+        # Streamlit Cloud images may miss NLTK resources on first boot.
+        try:
+            nltk.download("vader_lexicon", quiet=True)
+            sia = SentimentIntensityAnalyzer()
+        except Exception:
+            return pd.DataFrame()
+
     data = []
     
     for article in articles:
