@@ -32,6 +32,7 @@ dependencies = [
     # UI & Datenvisualisierung / ML
     "streamlit>=1.0.0",
     "matplotlib>=3.10.9",
+    "wordcloud>=1.9.4",
     "scikit-learn>=1.9.0",
     "wikipedia-api>=0.15.0",
     "statsbombpy>=1.19.0",

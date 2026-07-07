@@ -21,6 +21,7 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
+import random
 import re
 import unicodedata
 
@@ -126,6 +127,8 @@ def zeige_wortwolke(haeufigkeiten: dict, titel: str = "") -> None:
         st.info("Keine Wortwolken-Daten verfügbar.")
         return
 
+    st.caption("Hinweis: Paket 'wordcloud' nicht verfügbar, zeige vereinfachte Visualisierung.")
+
     max_weight = max(weight for _, weight in words)
     fig, ax = plt.subplots(figsize=(11.5, 6.2), dpi=140)
     fig.patch.set_facecolor("#f8fafc")
@@ -136,13 +139,18 @@ def zeige_wortwolke(haeufigkeiten: dict, titel: str = "") -> None:
     ax.set_position([0, 0, 1, 1])
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
-    cols = 6
+    rng = random.Random(42)
+    cmap = plt.cm.get_cmap("viridis")
+    cols = 8
     for index, (word, weight) in enumerate(words):
         row, col = divmod(index, cols)
-        size = 10 + (weight / max_weight) * 34
-        x = 0.04 + (col / cols) * 0.9
-        y = 0.92 - (row * 0.13)
-        ax.text(x, y, word, fontsize=size, ha="center", va="center")
+        size = 10 + (weight / max_weight) * 30
+        x_base = 0.06 + (col / cols) * 0.88
+        y_base = 0.90 - (row * 0.11)
+        x = min(0.96, max(0.04, x_base + rng.uniform(-0.025, 0.025)))
+        y = min(0.95, max(0.05, y_base + rng.uniform(-0.02, 0.02)))
+        color = cmap(min(1.0, 0.25 + (weight / max_weight) * 0.7))
+        ax.text(x, y, word, fontsize=size, ha="center", va="center", color=color, alpha=0.95)
 
     buffer = io.BytesIO()
     fig.savefig(buffer, format="png", dpi=140, bbox_inches="tight", pad_inches=0, facecolor="#f8fafc")
