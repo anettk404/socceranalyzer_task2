@@ -56,6 +56,14 @@ FALLBACK_TEAM_OPTIONS_BY_LIGA = {
     "Ligue 1": ["Alle Teams", "Paris Saint-Germain", "Olympique Marseille", "Olympique Lyon", "AS Monaco", "LOSC Lille", "Stade Rennais", "AJ Auxerre", "RC Lens", "FC Nantes"],
 }
 
+FALLBACK_ALL_TEAMS = ["Alle Teams", *sorted({
+    team
+    for liga, teams in FALLBACK_TEAM_OPTIONS_BY_LIGA.items()
+    if liga != "Alle Ligen"
+    for team in teams
+    if team != "Alle Teams"
+})]
+
 
 #-----------------------------------------------------
 # Hilfsfunktionen für UI-Komponenten
@@ -101,43 +109,13 @@ def get_available_seasons(liga: str) -> list[str]:
         params = (liga,)
 
     with sqlite3.connect(DB_PATH) as conn:
-        if "matches" in columns:
-            season_rows = conn.execute(
-                f"""
-                SELECT season, MAX(matches) AS max_team_matches
-                FROM openliga_table
-                {where_sql}
-                GROUP BY season
-                ORDER BY season DESC
-                """,
+        seasons = [
+            row[0]
+            for row in conn.execute(
+                f"SELECT DISTINCT season FROM openliga_table{where_sql} ORDER BY season DESC",
                 params,
             ).fetchall()
-
-            if season_rows:
-                best_matches = max(int(row[1] or 0) for row in season_rows)
-                minimum_matches = max(1, int(best_matches * 0.9))
-                seasons = [row[0] for row in season_rows if int(row[1] or 0) >= minimum_matches]
-            else:
-                seasons = []
-        else:
-            seasons = [
-                row[0]
-                for row in conn.execute(
-                    f"SELECT DISTINCT season FROM openliga_table{where_sql} ORDER BY season DESC",
-                    params,
-                ).fetchall()
-            ]
-
-    # Fallback: if filtering removed everything, keep legacy behavior.
-    if not seasons:
-        with sqlite3.connect(DB_PATH) as conn:
-            seasons = [
-                row[0]
-                for row in conn.execute(
-                    f"SELECT DISTINCT season FROM openliga_table{where_sql} ORDER BY season DESC",
-                    params,
-                ).fetchall()
-            ]
+        ]
 
     return ["Alle Saisons", *seasons] if seasons else ["Alle Saisons"]
 
@@ -145,10 +123,14 @@ def get_available_seasons(liga: str) -> list[str]:
 @st.cache_data(show_spinner=False)
 def get_available_teams(liga: str, saison: str) -> list[str]:
     if not DB_PATH.exists():
+        if liga == "Alle Ligen":
+            return FALLBACK_ALL_TEAMS
         return FALLBACK_TEAM_OPTIONS_BY_LIGA.get(liga, ["Alle Teams"])
 
     columns = _table_columns("openliga_table")
     if "team" not in columns:
+        if liga == "Alle Ligen":
+            return FALLBACK_ALL_TEAMS
         return FALLBACK_TEAM_OPTIONS_BY_LIGA.get(liga, ["Alle Teams"])
 
     where_clauses = []
@@ -169,7 +151,12 @@ def get_available_teams(liga: str, saison: str) -> list[str]:
     with sqlite3.connect(DB_PATH) as conn:
         teams = [row[0] for row in conn.execute(query, tuple(params)).fetchall()]
 
-    return ["Alle Teams", *teams] if teams else FALLBACK_TEAM_OPTIONS_BY_LIGA.get(liga, ["Alle Teams"])
+    if teams:
+        return ["Alle Teams", *teams]
+
+    if liga == "Alle Ligen":
+        return FALLBACK_ALL_TEAMS
+    return FALLBACK_TEAM_OPTIONS_BY_LIGA.get(liga, ["Alle Teams"])
 
 
 @st.cache_data(show_spinner=False)

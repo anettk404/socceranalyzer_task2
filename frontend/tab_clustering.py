@@ -83,7 +83,7 @@ def render_clustering_tab():
 
     col_filters, col_main = st.columns([1, 2.8])
 
-    with col_sidebar:
+    with col_filters:
         st.markdown('<div class="filter-label">CLUSTER-ANZAHL</div>', unsafe_allow_html=True)
         k_wert = st.slider("Cluster-Anzahl (k)", min_value=2, max_value=5, value=3,
                            label_visibility="collapsed", key="cluster_k")
