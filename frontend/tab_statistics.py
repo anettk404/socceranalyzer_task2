@@ -83,6 +83,13 @@ def format_team_option_label(team_name: str) -> str:
     return team_name if has_wordcloud_data(team_name) else f"{team_name} (ohne Wikipedia)"
 
 
+def format_liga_option_label(liga_name: str) -> str:
+    """Formatiert Liga-Bezeichnungen für die UI-Anzeige."""
+    if liga_name == "1. Bundesliga":
+        return "Bundesliga"
+    return liga_name
+
+
 # =====================================================
 # 4) KPI-Loader: OpenLigaDB + StatsBomb Kombination
 # =====================================================
@@ -433,6 +440,7 @@ def render_statistics_tab() -> None:
                 "Liga",
                 liga_options,
                 key="stats_liga",
+                format_func=format_liga_option_label,
             )
 
         saison_options = get_available_seasons(liga)
@@ -462,7 +470,7 @@ def render_statistics_tab() -> None:
         f'<div class="stats-focus-team">Verein im Fokus: {team_heading}</div>',
         unsafe_allow_html=True,
     )
-    st.caption(f"Aktiver Filter: {liga} · {saison}")
+    st.caption(f"Aktiver Filter: {format_liga_option_label(liga)} · {saison}")
     render_statistics(liga=liga, saison=saison, team=team)
 
 
@@ -592,5 +600,5 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
     )
     
     # Bereich 2: direkter Teamvergleich mit zwei synchronen Diagrammen.
-    st.markdown(f"### Team-Vergleich · {liga} · {saison}")
+    st.markdown(f"### Team-Vergleich · {format_liga_option_label(liga)} · {saison}")
     render_comparison_chart(team, liga, saison, ["Bayern", "Dortmund", "Leverkusen", "Mainz", "Leipzig"])
