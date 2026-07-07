@@ -69,4 +69,8 @@ def build_comparison_chart_data_for_stats_tab(liga: str, saison: str, team_name:
 
 def get_team_sentiment_for_stats_tab(team_name: str) -> dict | None:
     sentiment_path = PROJECT_ROOT / "data" / "wikipedia_articles.json"
-    return get_team_sentiment(team_name, file_path=str(sentiment_path))
+    try:
+        return get_team_sentiment(team_name, file_path=str(sentiment_path))
+    except Exception:
+        # Sentiment is optional for the UI; any NLP/runtime issue must not break the tab.
+        return None
