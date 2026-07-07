@@ -38,7 +38,7 @@ def load_articles(path: str | None = None) -> list[dict]:
     if path is None:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         path = os.path.join(script_dir, "..", "data", "wikipedia_articles.json")
-    with open(path) as f:
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 

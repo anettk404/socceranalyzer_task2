@@ -7,6 +7,8 @@ Word Cloud pro Verein (Wikipedia)
 Balkendiagramme (Vergleich zweier Teams)
 ------------------------------------------------------------------------------------------------
 """
+# Authorin: Annette Kufner
+
 
 #-----------------------------------------------------
 # Setup
@@ -430,6 +432,64 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
         st.plotly_chart(fig, use_container_width=True)
         if right_kpis and right_kpis["Chancenverwertung"] is None:
             st.caption("Für dieses Vergleichsteam liegen in StatsBomb aktuell keine Vergleichsdaten vor.")
+
+
+def render_statistics_tab() -> None:
+    st.markdown("""
+    <style>
+        .stats-focus-team {
+            color: #2d5a27;
+            font-weight: 700;
+            font-size: 1.35rem;
+            margin-top: 0.45rem;
+            margin-bottom: 0.1rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    liga_options = get_available_leagues()
+
+    with st.container():
+        st.markdown("**Filter**")
+
+        col_liga, col_saison, col_team = st.columns([1, 1, 1.2], gap="small")
+
+        with col_liga:
+            liga = st.selectbox(
+                "Liga",
+                liga_options,
+                key="stats_liga",
+            )
+
+        saison_options = get_available_seasons(liga)
+        default_saison_index = 1 if len(saison_options) > 1 else 0
+        with col_saison:
+            saison = st.selectbox(
+                "Saison",
+                saison_options,
+                index=default_saison_index,
+                key="stats_saison",
+            )
+
+        team_options = get_available_teams(liga, saison)
+        with col_team:
+            team = st.selectbox(
+                "Team",
+                team_options,
+                key="stats_team",
+                format_func=format_team_option_label,
+            )
+
+        st.caption("Teams mit dem Zusatz '(ohne Wikipedia)' haben aktuell keine verfügbare Wortwolke.")
+
+    team_heading = team if team != "Alle Teams" else "Alle Teams"
+    st.markdown(
+        f'<div class="stats-focus-team">Verein im Fokus: {team_heading}</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption(f"Aktiver Filter: {liga} · {saison}")
+
+    render_statistics(liga=liga, saison=saison, team=team)
 
 
 #-----------------------------------------------------

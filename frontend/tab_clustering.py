@@ -26,8 +26,7 @@ def lade_verfuegbare_ligen() -> list[str]:
 @st.cache_data(show_spinner=False)
 def lade_clustering_daten(k_wert: int, liga: str | None = None) -> tuple[pd.DataFrame, dict]:
     articles = load_articles()
-    ligen_filter = [liga] if liga else None
-    df_raw, X, vectorizer = run_clustering(articles, n_clusters=k_wert, ligen=ligen_filter)
+    df_raw, X, vectorizer = run_clustering(articles, n_clusters=k_wert)
     top_terms = get_top_terms_per_cluster(X, df_raw["cluster"].values, vectorizer)
 
     try:
@@ -82,20 +81,9 @@ def render_clustering_tab():
     </style>
     """, unsafe_allow_html=True)
 
-    col_sidebar, col_main = st.columns([1, 2.8])
+    col_filters, col_main = st.columns([1, 2.8])
 
     with col_sidebar:
-        ligen = lade_verfuegbare_ligen()
-        st.markdown('<div class="filter-label">LIGA</div>', unsafe_allow_html=True)
-        liga_auswahl = st.selectbox(
-            "Liga",
-            options=["Alle"] + ligen,
-            index=0,
-            label_visibility="collapsed",
-            key="cluster_liga",
-        )
-        gewaehlte_liga = None if liga_auswahl == "Alle" else liga_auswahl
-
         st.markdown('<div class="filter-label">CLUSTER-ANZAHL</div>', unsafe_allow_html=True)
         k_wert = st.slider("Cluster-Anzahl (k)", min_value=2, max_value=5, value=3,
                            label_visibility="collapsed", key="cluster_k")
@@ -105,13 +93,12 @@ def render_clustering_tab():
         <div class="cluster-header">
             <span class="cluster-title">Vereins-Clustering</span>
             <span class="cluster-subtitle">TF-IDF + KMeans + LLM-Labels</span>
-            <span class="cluster-subtitle">Wikipedia</span>
         </div>
         """, unsafe_allow_html=True)
 
         with st.spinner("Berechne Clustering..."):
             try:
-                df, insights = lade_clustering_daten(k_wert, gewaehlte_liga)
+                df, insights = lade_clustering_daten(k_wert)
             except Exception as e:
                 st.error(f"Fehler beim Laden der Daten: {e}")
                 return

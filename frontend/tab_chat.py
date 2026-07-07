@@ -134,10 +134,10 @@ def render_chat_tab():
     </style>
     """, unsafe_allow_html=True)
 
-    col_sidebar, col_chat = st.columns([1, 2.8])
+    col_examples, col_chat = st.columns([1, 2.8])
 
-    with col_sidebar:
-        st.markdown('<div class="filter-label">BEISPIEL-FRAGEN</div>', unsafe_allow_html=True)
+    with col_examples:
+        st.markdown('<div class="filter-label" style="margin-top:0">BEISPIEL-FRAGEN</div>', unsafe_allow_html=True)
         for bfrage in BEISPIEL_FRAGEN:
             if st.button(bfrage, key=f"btn_{bfrage}"):
                 st.session_state["beispiel_frage"] = bfrage.replace(" ↗", "")

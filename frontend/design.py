@@ -1,11 +1,9 @@
 # -----------------------------------------------
 # design.py
 # -----------------------------------------------
+# Authorin: Annette Kufner
 
-# Noch zu tun: 
-# - Tabs anbinden mit passenden Funktionen siehe unter Setup
 # 
-
 """
 Aufbau des Streamlit-Design für den GSA -nur Design, kein Inhalt
 
@@ -51,7 +49,7 @@ st.set_page_config(
     page_icon="⚽",                   # Icon im Browser-Tab
     layout="wide",                     # "wide" nutzt die volle Bildschirmbreite,
                                        # "centered" wäre die Standard-Breite
-    initial_sidebar_state="expanded" # Sidebar direkt sichtbar (ausgeklappt), nicht eingeklappt
+    initial_sidebar_state="collapsed"
 )
 
 
@@ -60,6 +58,9 @@ st.set_page_config(
 
 st.markdown("""
 <style>
+    [data-testid="stSidebar"], [data-testid="stSidebarNav"], [data-testid="collapsedControl"] {
+        display: none !important;
+    }
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] { padding: 8px 16px; }
     .source-tag {
@@ -86,7 +87,7 @@ st.title("GenSoccerAnalyzer") # große Überschrift, wie h1 in html, erscheint d
 
 
 #-------------------------------------------------
-# Sidebar
+# Sidebar - entfernt
 #-------------------------------------------------
 
 
@@ -105,42 +106,7 @@ tab_stats, tab_clustering, tab_chat = st.tabs([
 # -------------------------------------------------
 
 with tab_stats:
-
-    with st.sidebar:
-        liga_options = tab_statistics.get_available_leagues()
-
-        st.subheader("Filter")
-
-        liga = st.selectbox(
-            "Liga",
-            liga_options,
-            key="stats_liga"
-        )
-
-        saison_options = tab_statistics.get_available_seasons(liga)
-        default_saison_index = 1 if len(saison_options) > 1 else 0
-
-        saison = st.selectbox(
-            "Saison",
-            saison_options,
-            index=default_saison_index,
-            key="stats_saison"
-        )
-
-        team_options = tab_statistics.get_available_teams(liga, saison)
-        team = st.selectbox(
-            "Team",
-            team_options,
-            key="stats_team",
-            format_func=tab_statistics.format_team_option_label,
-        )
-        st.caption("Teams mit dem Zusatz '(ohne Wikipedia)' haben aktuell keine verfuegbare Wortwolke.")
-
-    tab_statistics.render_statistics(
-        liga=liga,
-        saison=saison,
-        team=team
-    )
+    tab_statistics.render_statistics_tab()
 
 
 # -------------------------------------------------
