@@ -28,10 +28,13 @@ import unicodedata
 import matplotlib.pyplot as plt
 import streamlit as st
 
+_WORDCLOUD_IMPORT_ERROR: str | None = None
+
 try:
     from wordcloud import WordCloud
-except ImportError:  # pragma: no cover - optional dependency
+except Exception as exc:  # pragma: no cover - optional dependency
     WordCloud = None
+    _WORDCLOUD_IMPORT_ERROR = str(exc)
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
@@ -127,7 +130,10 @@ def zeige_wortwolke(haeufigkeiten: dict, titel: str = "") -> None:
         st.info("Keine Wortwolken-Daten verfügbar.")
         return
 
-    st.caption("Hinweis: Paket 'wordcloud' nicht verfügbar, zeige vereinfachte Visualisierung.")
+    hint = "Hinweis: Paket 'wordcloud' nicht verfügbar, zeige vereinfachte Visualisierung."
+    if _WORDCLOUD_IMPORT_ERROR:
+        hint += f" (Grund: {_WORDCLOUD_IMPORT_ERROR})"
+    st.caption(hint)
 
     max_weight = max(weight for _, weight in words)
     fig, ax = plt.subplots(figsize=(11.5, 6.2), dpi=140)
