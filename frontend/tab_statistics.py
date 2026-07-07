@@ -514,6 +514,9 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         "Punkte": "OpenligaDB",
         "Siege": "OpenligaDB",
         "Niederlagen": "OpenligaDB",
+        "Tore": "OpenligaDB",
+        "Gegentore": "OpenligaDB",
+        "StatsBomb-Kennzahl": "Statsbomb",
         "WordCloud": "Wikipedia"
     }
 
@@ -522,8 +525,11 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         ("Punkte", kpi_data["Punkte"] if kpi_data else "-", "Pkt"),
         ("Siege", kpi_data["Siege"] if kpi_data else "-", ""),
         ("Niederlagen", kpi_data["Niederlagen"] if kpi_data else "-", ""),
+        ("Tore", leistung_kpis["Tore"] if leistung_kpis else "-", ""),
+        ("Gegentore", leistung_kpis["Gegentore"] if leistung_kpis else "-", ""),
+        ("StatsBomb-Kennzahl", "-", ""),
     ]
-    kpi_cols = st.columns(4, gap="small")
+    kpi_cols = st.columns(len(kpi_labels), gap="small")
     for index, (label, value, unit) in enumerate(kpi_labels):
         with kpi_cols[index]:
             source = elements_sources[label]
@@ -548,47 +554,6 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
     )
     st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3; margin-top: 1rem; margin-bottom: 1rem;'>", unsafe_allow_html=True)
     
-    # ===== BEREICH 2: Thematische KPI-Paare =====
-    st.markdown(f"### Leistung - {team} · {liga} · {saison}")
-    
-    # Definiere Quellen für Leistungs-KPIs
-    leistung_sources = {
-        "Tore": "OpenligaDB",
-        "Chancenverwertung": "Statsbomb",
-        "Gegentore": "OpenligaDB",
-        "Druckresistenz": "Statsbomb"
-    }
-    
-    # KPI-Paare
-    col_offensive, col_defensive = st.columns(2, gap="medium")
-    
-    with col_offensive:
-        st.write("**Offensive**")
-        col_t, col_c = st.columns(2)
-        with col_t:
-            is_disabled = leistung_sources["Tore"] not in sources_selected
-            render_kpi_card("Tore", leistung_kpis["Tore"] if leistung_kpis else "-", "", source=leistung_sources["Tore"], disabled=is_disabled)
-        with col_c:
-            is_disabled = leistung_sources["Chancenverwertung"] not in sources_selected
-            chance_value = leistung_kpis["Chancenverwertung"] if leistung_kpis and leistung_kpis["Chancenverwertung"] is not None else "-"
-            render_kpi_card("Chancenverwertung", chance_value, "", source=leistung_sources["Chancenverwertung"], disabled=is_disabled)
-    
-    with col_defensive:
-        st.write("**Defensive**")
-        col_g, col_d = st.columns(2)
-        with col_g:
-            is_disabled = leistung_sources["Gegentore"] not in sources_selected
-            render_kpi_card("Gegentore", leistung_kpis["Gegentore"] if leistung_kpis else "-", "", source=leistung_sources["Gegentore"], disabled=is_disabled)
-        with col_d:
-            is_disabled = leistung_sources["Druckresistenz"] not in sources_selected
-            druck_value = f"{leistung_kpis['Druckresistenz']}%" if leistung_kpis and leistung_kpis["Druckresistenz"] is not None else "-"
-            render_kpi_card("Druckresistenz", druck_value, "", source=leistung_sources["Druckresistenz"], disabled=is_disabled)
-
-    if leistung_kpis and (leistung_kpis["Chancenverwertung"] is None or leistung_kpis["Druckresistenz"] is None):
-        st.caption("StatsBomb-Daten sind für diese Liga/Saison aktuell nicht in soccer.db verfügbar.")
-    
-    st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3;'>", unsafe_allow_html=True)
-    
-    # ===== BEREICH 3: Team-Vergleich =====
+    # ===== BEREICH 2: Team-Vergleich =====
     st.markdown(f"### Team-Vergleich · {liga} · {saison}")
     render_comparison_chart(team, liga, saison, ["Bayern", "Dortmund", "Leverkusen", "Mainz", "Leipzig"])
