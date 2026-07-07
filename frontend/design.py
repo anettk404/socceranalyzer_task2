@@ -25,8 +25,6 @@ DB_PATH = PROJECT_ROOT / "data" / "soccer.db"
 REQUIRED_DB_TABLES = {
     "openliga_matches",
     "openliga_table",
-    "statsbomb_matches",
-    "statsbomb_events",
 }
 
 #-------------------------------------------------
@@ -74,22 +72,24 @@ def _bootstrap_database_if_needed() -> tuple[bool, str]:
     if _db_is_ready():
         return True, "ready"
 
-    ingest_path = PROJECT_ROOT / "data" / "structured_data" / "ingest.py"
-    if not ingest_path.exists():
-        return False, f"Ingestion-Skript nicht gefunden: {ingest_path}"
+    load_openliga_path = PROJECT_ROOT / "data" / "structured_data" / "load_openliga.py"
+    if not load_openliga_path.exists():
+        return False, f"OpenLiga-Lader nicht gefunden: {load_openliga_path}"
 
     try:
         if str(PROJECT_ROOT) not in sys.path:
             sys.path.insert(0, str(PROJECT_ROOT))
-        ingest_module = _load_module_from_path("structured_data_ingest", ingest_path)
-        ingest_module.main()
+        load_openliga_module = _load_module_from_path("structured_data_load_openliga", load_openliga_path)
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(DB_PATH) as conn:
+            load_openliga_module.save_to_db(conn)
     except Exception as exc:
         return False, str(exc)
 
     if not _db_is_ready():
-        return False, "Datenbank wurde erstellt, enthält aber nicht alle erwarteten Tabellen."
+        return False, "Datenbank wurde erstellt, enthält aber nicht alle erwarteten OpenLiga-Tabellen."
 
-    return True, "bootstrapped"
+    return True, "bootstrapped_openliga"
 
 
 try:
@@ -146,7 +146,7 @@ st.markdown("""
 
 st.title("GenSoccerAnalyzer") # große Überschrift, wie h1 in html, erscheint direkt auf der Seite
 
-with st.spinner("Initialisiere Datenbank..."):
+with st.spinner("Initialisiere Basisdaten..."):
     db_ok, db_status = _bootstrap_database_if_needed()
 
 if not db_ok:
@@ -155,7 +155,10 @@ if not db_ok:
     )
     st.caption(f"Grund: {db_status}")
 elif db_status == "bootstrapped" and not st.session_state.get("db_bootstrap_shown"):
-    st.success("Lokale Datenbank wurde beim Start automatisch erstellt.")
+    st.success("Lokale OpenLiga-Basisdaten wurden beim Start automatisch erstellt.")
+    st.session_state["db_bootstrap_shown"] = True
+elif db_status == "bootstrapped_openliga" and not st.session_state.get("db_bootstrap_shown"):
+    st.success("Lokale OpenLiga-Basisdaten wurden beim Start automatisch erstellt.")
     st.session_state["db_bootstrap_shown"] = True
 
 

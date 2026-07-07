@@ -18,6 +18,14 @@ def _table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
     return {row[1] for row in rows}
 
 
+def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
+    row = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table_name,),
+    ).fetchone()
+    return row is not None
+
+
 def _statsbomb_filter_supported(liga: str | None) -> bool:
     return liga in (None, "", "Alle Ligen") or liga in FILTERABLE_LEAGUES
 
@@ -36,6 +44,9 @@ def load_statsbomb_kpis_from_db(team_name: str, saison_label: str, liga: str, db
 
     with sqlite3.connect(database_path) as conn:
         conn.row_factory = sqlite3.Row
+        if not _table_exists(conn, "statsbomb_matches") or not _table_exists(conn, "statsbomb_events"):
+            return None
+
         match_columns = _table_columns(conn, "statsbomb_matches")
         statsbomb_team = resolve_statsbomb_team_name(conn, team_name, liga, saison_label, match_columns)
         if statsbomb_team is None:
