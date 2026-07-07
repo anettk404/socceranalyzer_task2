@@ -1,4 +1,8 @@
-"""OpenLigaDB loader — mehrere Ligen und Saisons: Matches & Tabelle."""
+"""
+Autor: Selma Elezovic
+Lädt Matches und Tabellenstände aus der OpenLigaDB-API für mehrere Ligen und Saisons
+und speichert sie in den SQLite-Tabellen openliga_matches und openliga_table.
+"""
 import sqlite3
 import requests
 import pandas as pd
@@ -33,6 +37,7 @@ def fetch_matches(league_name: str, league_code: str, season: int) -> pd.DataFra
     rows = []
     for m in raw:
         g = m.get("matchResults", [])
+        # resultOrderID == 2 ist das Endergebnis; Halbzeit hat ID 1
         final = next((r for r in g if r.get("resultOrderID") == 2), g[0] if g else None)
         rows.append({
             "match_id": m["matchID"],

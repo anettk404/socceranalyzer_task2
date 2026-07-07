@@ -1,4 +1,9 @@
-"""StatsBomb loader — mehrere Ligen und Saisons mit allen Events."""
+"""
+Autor: Selma Elezovic
+Lädt Matches und detaillierte Ereignisdaten (Schüsse, Pässe, xG) aus der StatsBomb-API
+für mehrere Ligen und Saisons. Speichert in statsbomb_matches und statsbomb_events.
+Bereits vorhandene Matches werden übersprungen (Duplikat-Schutz via _existing_match_ids).
+"""
 import sqlite3
 import warnings
 import pandas as pd
@@ -30,6 +35,7 @@ EVENT_COLS = [
 
 
 def _flatten_location(df: pd.DataFrame) -> pd.DataFrame:
+    # StatsBomb speichert Koordinaten als [x, y]-Liste — SQLite braucht separate Spalten
     if "location" in df.columns:
         df["loc_x"] = df["location"].apply(lambda v: v[0] if isinstance(v, list) else None)
         df["loc_y"] = df["location"].apply(lambda v: v[1] if isinstance(v, list) else None)
@@ -123,6 +129,8 @@ def save_to_db(con: sqlite3.Connection) -> None:
         existing_matches = _existing_match_ids(con, "statsbomb_matches", league_label, label)
         matches_to_write = matches[~matches["match_id"].isin(existing_matches)].copy()
         if not matches_to_write.empty:
+            # "replace" nur beim allerersten Schreibvorgang, danach immer "append"
+            # damit Daten aus verschiedenen Ligen nicht überschrieben werden.
             matches_to_write.to_sql("statsbomb_matches", con, if_exists="append" if wrote_matches or _table_exists(con, "statsbomb_matches") else "replace", index=False)
             wrote_matches = True
             total_matches += len(matches_to_write)

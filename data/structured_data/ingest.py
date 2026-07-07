@@ -1,4 +1,8 @@
-"""Main ingestion script for OpenLigaDB, StatsBomb and Wikipedia wordcloud data."""
+"""
+Autor: Selma Elezovic
+Haupt-Ingestion-Skript: lädt OpenLigaDB- und StatsBomb-Daten in die SQLite-Datenbank
+und erstellt die Wikipedia-Wortwolken-JSON-Datei. Einmalig ausführen vor dem App-Start.
+"""
 import importlib.util
 import json
 import sqlite3

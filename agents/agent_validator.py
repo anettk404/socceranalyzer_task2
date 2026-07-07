@@ -1,3 +1,8 @@
+# Autor: Selma Elezovic
+# Validator-Agent: prüft die finale Antwort auf Halluzinationen und gibt einen
+# Confidence-Score (0.0–1.0) zurück. Bei SQL-Daten wird direkt gegen die Rohdaten
+# verglichen, bei faktischen Aussagen wird zusätzlich ein RAG-Fact-Check durchgeführt.
+
 import json
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -7,7 +12,12 @@ from .agent_rag import _retrieve
 
 
 def _needs_fact_check(answer: str) -> bool:
-    """Heuristik: enthält die Antwort faktische Aussagen die überprüft werden sollten?"""
+    """Heuristik: enthält die Antwort faktische Aussagen die überprüft werden sollten?
+
+    Generische Verben wie 'ist', 'war', 'hat' sind bewusst enthalten — fast jede
+    inhaltliche Antwort enthält sie, sodass der RAG-Fact-Check möglichst breit greift.
+    Nur bei SQL-Daten (sql_result vorhanden) wird diese Funktion gar nicht aufgerufen.
+    """
     fact_indicators = [
         "gegründet", "titel", "gewonnen", "geboren", "gestorben", "stadion",
         "champions", "meisterschaft", "rekord", "trainer", "gründer", "geschichte",
