@@ -87,6 +87,20 @@ TEST_CASES = [
         "hallucination": "In der Bundesliga spielen 18 Vereine.",
         "ground_truth": "In der Bundesliga spielen 18 Vereine.",
     },
+    # Edge Case: zeitkritischer Trainer-Fakt — genau der Bug der gefunden wurde
+    {
+        "label": "Falscher Trainer (zeitkritisch)",
+        "question": "Wer ist der aktuelle Trainer von FC Bayern München?",
+        "hallucination": "Der aktuelle Trainer des FC Bayern München ist Thomas Tuchel.",
+        "ground_truth": "Der aktuelle Trainer des FC Bayern München ist Vincent Kompany.",
+    },
+    # Edge Case: außerhalb der Domäne — Validator soll niedrigen Score geben
+    {
+        "label": "Frage außerhalb der Domäne",
+        "question": "Wer hat die Formel-1-WM 2023 gewonnen?",
+        "hallucination": "Die Formel-1-WM 2023 wurde von Max Verstappen gewonnen.",
+        "ground_truth": "Diese Frage liegt außerhalb der Fußball-Domäne.",
+    },
 ]
 
 HALLUCINATION_CASES = [tc for tc in TEST_CASES if not tc["label"].startswith("Korrekte")]

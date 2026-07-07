@@ -122,15 +122,9 @@ def aggregator(state: GraphState) -> GraphState:
 
     if len(state["sub_answers"]) == 1:
         answer = state["sub_answers"][0].split("] ", 1)[-1]
-        if not history_block:
-            return {**state, "answer": answer}
-        # Auch bei einzelner Quelle den Kontext nutzen um Wiederholungen zu vermeiden
-        messages = [
-            SystemMessage(content=PROMPTS["aggregator"]["system"]),
-            HumanMessage(content=f"{history_block}Frage: {state['question']}\n\nTeilergebnis:\n{answer}"),
-        ]
-        response = llm.invoke(messages)
-        return {**state, "answer": response.content.strip()}
+        # Bei einzelnem Teilergebnis direkt zurückgeben — kein LLM-Call nötig,
+        # verhindert dass GPT eigene Trainingsdaten über die Quelldaten stellt.
+        return {**state, "answer": answer}
 
     sub_answers_text = "\n\n".join(state["sub_answers"])
     messages = [

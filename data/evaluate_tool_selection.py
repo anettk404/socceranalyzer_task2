@@ -51,6 +51,13 @@ TEST_CASES = [
     {"question": "Wie viele Champions-League-Titel hat Real Madrid insgesamt gewonnen?",   "expected": "rag"},
     {"question": "Was ist das Estadio Santiago Bernabéu?",                                 "expected": "rag"},
     {"question": "Welche Spieler gelten als die größten Legenden des FC Barcelona?",       "expected": "rag"},
+
+    # Edge Case: zeitkritischer Fakt — sollte zu rag geroutet werden
+    {"question": "Wer ist der aktuelle Trainer von FC Bayern München?",                    "expected": "rag"},
+    # Edge Case: mehrdeutiger Vereinsname — testet ob Supervisor korrekt interpretiert
+    {"question": "Was weißt du über Bayern?",                                              "expected": "rag"},
+    # Edge Case: komplett außerhalb der Domäne — sollte trotzdem einen Agenten wählen (rag als Fallback)
+    {"question": "Wer hat die Formel-1-WM 2023 gewonnen?",                                "expected": "rag"},
 ]
 
 
