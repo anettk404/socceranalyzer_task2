@@ -1,5 +1,7 @@
 """
 GenSoccerAnalyzer – Schritt 2: Pinecone-Indexierung
+
+Autorin: Susanne Schmid
 =====================================================
 Liest die gesammelten Wikipedia-Artikel und indexiert sie in Pinecone.
 

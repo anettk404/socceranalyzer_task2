@@ -1,8 +1,13 @@
 """
 clustering.py
+
+Autorin: Susanne Schmid
+
+------------------------------------------------------------------------------------------------
 Klassisches NLP: TF-IDF Vektorisierung, KMeans Clustering und PCA-Reduktion
 für die Visualisierung der Wikipedia-Vereinsartikel.
 GenAI: LLM-basiertes Labeling der gefundenen Cluster.
+------------------------------------------------------------------------------------------------
 """
 
 import os
