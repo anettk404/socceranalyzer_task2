@@ -70,6 +70,10 @@ def render_clustering_tab():
             background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
             padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;
         }
+        .cluster-source {
+            background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe;
+            padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;
+        }
         .cluster-card {
             background: white; border: 1px solid #e5e7eb; border-radius: 10px;
             padding: 0.9rem 1rem; margin-bottom: 0.6rem;
@@ -108,6 +112,7 @@ def render_clustering_tab():
         <div class="cluster-header">
             <span class="cluster-title">Vereins-Clustering</span>
             <span class="cluster-subtitle">TF-IDF + KMeans + LLM-Labels</span>
+            <span class="cluster-source">Quelle: Wikipedia</span>
         </div>
         """, unsafe_allow_html=True)
 

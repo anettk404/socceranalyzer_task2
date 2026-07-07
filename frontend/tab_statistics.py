@@ -142,7 +142,10 @@ def render_kpi_card(
 @st.cache_data(show_spinner=False)
 def load_team_sentiment(team_name: str) -> dict | None:
     """Lädt teambezogene Sentiment-Werte aus der Wikipedia-JSON über den Service."""
-    return get_team_sentiment_for_stats_tab(team_name)
+    try:
+        return get_team_sentiment_for_stats_tab(team_name)
+    except Exception:
+        return None
 
 
 def _sentiment_color(sentiment_label: str) -> str:
@@ -166,7 +169,12 @@ def render_sentiment_section(team_name: str, source_enabled: bool = True):
         st.info("Bitte ein konkretes Team auswählen, um den Sentiment-Wert anzuzeigen.")
         return
 
-    team_sentiment = load_team_sentiment(team_name)
+    try:
+        team_sentiment = load_team_sentiment(team_name)
+    except Exception:
+        st.info("Sentiment-Daten sind aktuell nicht verfügbar.")
+        return
+
     if team_sentiment is None:
         st.info("Für dieses Team sind aktuell keine Sentiment-Daten verfügbar.")
         return
