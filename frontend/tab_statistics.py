@@ -405,7 +405,7 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
             color_map,
             shared_y_max,
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         if left_kpis and left_kpis["Chancenverwertung"] is None:
             st.caption("Für dieses Team liegen in StatsBomb aktuell keine Vergleichsdaten vor.")
 
@@ -416,7 +416,7 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
             color_map,
             shared_y_max,
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         if right_kpis and right_kpis["Chancenverwertung"] is None:
             st.caption("Für dieses Vergleichsteam liegen in StatsBomb aktuell keine Vergleichsdaten vor.")
 

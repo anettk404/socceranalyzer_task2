@@ -122,7 +122,7 @@ def zeige_wortwolke(haeufigkeiten: dict, titel: str = "") -> None:
         fig.savefig(buffer, format="png", dpi=140, bbox_inches="tight", pad_inches=0, facecolor="#f8fafc")
         plt.close(fig)
         buffer.seek(0)
-        st.image(buffer.getvalue(), caption=titel or None, use_container_width=True, output_format="PNG")
+        st.image(buffer.getvalue(), caption=titel or None, width="stretch", output_format="PNG")
         return
 
     words = sorted(haeufigkeiten.items(), key=lambda item: item[1], reverse=True)[:60]
@@ -162,7 +162,7 @@ def zeige_wortwolke(haeufigkeiten: dict, titel: str = "") -> None:
     fig.savefig(buffer, format="png", dpi=140, bbox_inches="tight", pad_inches=0, facecolor="#f8fafc")
     plt.close(fig)
     buffer.seek(0)
-    st.image(buffer.getvalue(), caption=titel or None, use_container_width=True, output_format="PNG")
+    st.image(buffer.getvalue(), caption=titel or None, width="stretch", output_format="PNG")
 
 
 def render_source_tags(quellen: list):
