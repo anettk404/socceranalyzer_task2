@@ -10,279 +10,98 @@ Balkendiagramme (Vergleich zweier Teams)
 # Authorin: Annette Kufner
 
 
-#-----------------------------------------------------
-# Setup
-#-----------------------------------------------------
+# =====================================================
+# 1) Grundsetup: Imports und Pfadkonfiguration
+# =====================================================
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import sqlite3
 from pathlib import Path
 import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     from helpers import load_wordcloud_frequencies, zeige_wortwolke
 except ImportError:  # pragma: no cover - fallback for different execution contexts
     from frontend.helpers import load_wordcloud_frequencies, zeige_wortwolke
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-from services.stats_kpi_service import (  # noqa: E402
-    load_statsbomb_kpis_from_db,
-    normalize_openliga_season_label,
-    normalize_openliga_team_name,
+from services.stats_repository import (  # noqa: E402
+    get_available_leagues as repo_get_available_leagues,
+    get_available_seasons as repo_get_available_seasons,
+    get_available_teams as repo_get_available_teams,
+    load_top_kpis_from_db as repo_load_top_kpis_from_db,
+)
+from services.stats_tab_service import (  # noqa: E402
+    build_comparison_chart_data_for_stats_tab,
+    get_team_sentiment_for_stats_tab,
+    load_leistung_kpis_for_stats_tab,
 )
 
-#-----------------------------------------------------
-# Import weiterer Funktionen aus anderen .py-Dateien
-#-----------------------------------------------------
 
-DB_PATH = PROJECT_ROOT / "data" / "soccer.db"
-DEFAULT_LIGA_OPTIONS = ["Alle Ligen", "1. Bundesliga", "La Liga", "Premier League", "Serie A", "Ligue 1"]
-FALLBACK_TEAM_OPTIONS_BY_LIGA = {
-    "Alle Ligen": ["Alle Teams"],
-    "1. Bundesliga": [
-        "Alle Teams", "FC Bayern München", "Borussia Dortmund", "Bayer 04 Leverkusen", "RB Leipzig",
-        "VfB Stuttgart", "Eintracht Frankfurt", "SC Freiburg", "TSG Hoffenheim", "VfL Wolfsburg",
-        "Borussia Mönchengladbach", "FC Augsburg", "Mainz 05", "Werder Bremen", "1. FC Heidenheim",
-        "1. FC Union Berlin", "VfL Bochum", "SV Darmstadt 98",
-    ],
-    "La Liga": ["Alle Teams", "Real Madrid", "FC Barcelona", "Atlético Madrid", "Sevilla FC", "Villarreal CF", "Real Sociedad", "Athletic Club", "Valencia CF", "Celta Vigo"],
-    "Premier League": ["Alle Teams", "Manchester City", "Liverpool FC", "Arsenal FC", "Chelsea FC", "Manchester United", "Tottenham Hotspur", "Newcastle United", "Aston Villa", "Leicester City"],
-    "Serie A": ["Alle Teams", "Inter Mailand", "Juventus Turin", "AC Mailand", "AS Rom", "SSC Neapel", "Atalanta Bergamo", "Lazio Rom", "Fiorentina", "Bologna FC"],
-    "Ligue 1": ["Alle Teams", "Paris Saint-Germain", "Olympique Marseille", "Olympique Lyon", "AS Monaco", "LOSC Lille", "Stade Rennais", "AJ Auxerre", "RC Lens", "FC Nantes"],
-}
+# =====================================================
+# 2) Statische UI-/Filter-Defaults
+# =====================================================
 
-FALLBACK_ALL_TEAMS = ["Alle Teams", *sorted({
-    team
-    for liga, teams in FALLBACK_TEAM_OPTIONS_BY_LIGA.items()
-    if liga != "Alle Ligen"
-    for team in teams
-    if team != "Alle Teams"
-})]
-
-
-#-----------------------------------------------------
-# Hilfsfunktionen für UI-Komponenten
-#-----------------------------------------------------
-
-@st.cache_data(show_spinner=False)
-def _table_columns(table_name: str) -> set[str]:
-    if not DB_PATH.exists():
-        return set()
-    with sqlite3.connect(DB_PATH) as conn:
-        rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
-    return {row[1] for row in rows}
-
+# =====================================================
+# 3) Datenzugriff: verfügbare Filterwerte aus der DB
+# =====================================================
 
 @st.cache_data(show_spinner=False)
 def get_available_leagues() -> list[str]:
-    if not DB_PATH.exists():
-        return DEFAULT_LIGA_OPTIONS
-
-    columns = _table_columns("openliga_table")
-    if "league" not in columns:
-        return DEFAULT_LIGA_OPTIONS
-
-    with sqlite3.connect(DB_PATH) as conn:
-        leagues = [row[0] for row in conn.execute("SELECT DISTINCT league FROM openliga_table ORDER BY league").fetchall()]
-
-    return ["Alle Ligen", *leagues] if leagues else DEFAULT_LIGA_OPTIONS
+    """UI-Wrapper für verfügbare Ligen aus dem Repository-Layer."""
+    return repo_get_available_leagues()
 
 
 @st.cache_data(show_spinner=False)
 def get_available_seasons(liga: str) -> list[str]:
-    if not DB_PATH.exists():
-        return ["Alle Saisons", "2024/25", "2023/24", "2022/23"]
-
-    columns = _table_columns("openliga_table")
-    if "season" not in columns:
-        return ["Alle Saisons", "2024/25", "2023/24", "2022/23"]
-
-    where_sql = ""
-    params: tuple = ()
-    if liga not in (None, "", "Alle Ligen") and "league" in columns:
-        where_sql = " WHERE league = ?"
-        params = (liga,)
-
-    with sqlite3.connect(DB_PATH) as conn:
-        seasons = [
-            row[0]
-            for row in conn.execute(
-                f"SELECT DISTINCT season FROM openliga_table{where_sql} ORDER BY season DESC",
-                params,
-            ).fetchall()
-        ]
-
-    return ["Alle Saisons", *seasons] if seasons else ["Alle Saisons"]
+    """UI-Wrapper für verfügbare Saisons aus dem Repository-Layer."""
+    return repo_get_available_seasons(liga)
 
 
 @st.cache_data(show_spinner=False)
 def get_available_teams(liga: str, saison: str) -> list[str]:
-    if not DB_PATH.exists():
-        if liga == "Alle Ligen":
-            return FALLBACK_ALL_TEAMS
-        return FALLBACK_TEAM_OPTIONS_BY_LIGA.get(liga, ["Alle Teams"])
-
-    columns = _table_columns("openliga_table")
-    if "team" not in columns:
-        if liga == "Alle Ligen":
-            return FALLBACK_ALL_TEAMS
-        return FALLBACK_TEAM_OPTIONS_BY_LIGA.get(liga, ["Alle Teams"])
-
-    where_clauses = []
-    params: list[str] = []
-    if liga not in (None, "", "Alle Ligen") and "league" in columns:
-        where_clauses.append("league = ?")
-        params.append(liga)
-    normalized_season = normalize_openliga_season_label(saison)
-    if normalized_season and "season" in columns:
-        where_clauses.append("season = ?")
-        params.append(normalized_season)
-
-    query = "SELECT DISTINCT team FROM openliga_table"
-    if where_clauses:
-        query += " WHERE " + " AND ".join(where_clauses)
-    query += " ORDER BY team"
-
-    with sqlite3.connect(DB_PATH) as conn:
-        teams = [row[0] for row in conn.execute(query, tuple(params)).fetchall()]
-
-    if teams:
-        return ["Alle Teams", *teams]
-
-    if liga == "Alle Ligen":
-        return FALLBACK_ALL_TEAMS
-    return FALLBACK_TEAM_OPTIONS_BY_LIGA.get(liga, ["Alle Teams"])
+    """UI-Wrapper für verfügbare Teams aus dem Repository-Layer."""
+    return repo_get_available_teams(liga, saison)
 
 
 @st.cache_data(show_spinner=False)
 def has_wordcloud_data(team_name: str) -> bool:
+    """Prüft, ob für ein Team Wikipedia-Wortwolkenfrequenzen verfügbar sind."""
     if not team_name or team_name == "Alle Teams":
         return False
     return bool(load_wordcloud_frequencies(team_name))
 
 
 def format_team_option_label(team_name: str) -> str:
+    """Kennzeichnet Teams ohne Wikipedia-Daten direkt im Select-Label."""
     if team_name == "Alle Teams":
         return team_name
     return team_name if has_wordcloud_data(team_name) else f"{team_name} (ohne Wikipedia)"
 
 
+# =====================================================
+# 4) KPI-Loader: OpenLigaDB + StatsBomb Kombination
+# =====================================================
+
 @st.cache_data(show_spinner=False)
 def load_top_kpis_from_db(liga: str, saison: str, team_name: str) -> dict | None:
-    """Liest Platz, Punkte, Siege, Niederlagen, Tore und Gegentore aus soccer.db."""
-    if not DB_PATH.exists():
-        return None
-
-    columns = _table_columns("openliga_table")
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-
-        where_clauses = []
-        params: list[str] = []
-
-        if liga not in (None, "", "Alle Ligen") and "league" in columns:
-            where_clauses.append("league = ?")
-            params.append(liga)
-
-        normalized_season = normalize_openliga_season_label(saison)
-        if normalized_season and "season" in columns:
-            where_clauses.append("season = ?")
-            params.append(normalized_season)
-
-        selected_team = normalize_openliga_team_name(team_name)
-        if selected_team:
-            where_clauses.append("team = ?")
-            params.append(selected_team)
-
-        select_fields = [
-            "league" if "league" in columns else "'' AS league",
-            "season" if "season" in columns else "'' AS season",
-            "team",
-            "position",
-            "points",
-            "matches" if "matches" in columns else "0 AS matches",
-            "won",
-            "lost",
-            "goals_for",
-            "goals_against",
-        ]
-        query = f"SELECT {', '.join(select_fields)} FROM openliga_table"
-        if where_clauses:
-            query += " WHERE " + " AND ".join(where_clauses)
-        order_by = ["position ASC"]
-        if "season_start_year" in columns:
-            order_by.insert(0, "season_start_year DESC")
-        elif "season" in columns:
-            order_by.insert(0, "season DESC")
-        query += " ORDER BY " + ", ".join(order_by) + " LIMIT 1"
-
-        row = conn.execute(query, tuple(params)).fetchone()
-
-    if row is None:
-        return None
-
-    return {
-        "league": row["league"] if "league" in row.keys() else liga,
-        "season": row["season"] if "season" in row.keys() else saison,
-        "team": row["team"],
-        "Platz": int(row["position"]),
-        "Punkte": int(row["points"]),
-        "Spiele": int(row["matches"]),
-        "Siege": int(row["won"]),
-        "Unentschieden": max(int(row["matches"]) - int(row["won"]) - int(row["lost"]), 0),
-        "Niederlagen": int(row["lost"]),
-        "Tore": int(row["goals_for"]),
-        "Gegentore": int(row["goals_against"]),
-    }
+    """UI-Wrapper für Top-KPIs aus dem Repository-Layer."""
+    return repo_load_top_kpis_from_db(liga, saison, team_name)
 
 
 @st.cache_data(show_spinner=False)
 def load_leistung_kpis_from_db(liga: str, saison: str, team_name: str) -> dict | None:
-    table_kpis = load_top_kpis_from_db(liga, saison, team_name)
-    if table_kpis is None:
-        return None
+    """UI-Wrapper für Leistungs-KPIs aus dem Business-Layer."""
+    return load_leistung_kpis_for_stats_tab(liga, saison, team_name)
 
-    requested_season = table_kpis["season"]
-    statsbomb_season_used = requested_season
-    statsbomb_kpis = load_statsbomb_kpis_from_db(table_kpis["team"], requested_season, table_kpis["league"])
 
-    # Falls die gewaehlte Saison keine StatsBomb-Daten hat (z. B. 2024/25),
-    # nutze die zuletzt verfuegbare historische Saison fuer das Team.
-    if statsbomb_kpis is None and isinstance(requested_season, str) and "/" in requested_season:
-        try:
-            start_year = int(requested_season.split("/")[0])
-            for candidate_start in range(start_year - 1, 2014, -1):
-                candidate_season = f"{candidate_start}/{str(candidate_start + 1)[-2:]}"
-                fallback = load_statsbomb_kpis_from_db(table_kpis["team"], candidate_season, table_kpis["league"])
-                if fallback is not None:
-                    statsbomb_kpis = fallback
-                    statsbomb_season_used = candidate_season
-                    break
-        except ValueError:
-            pass
-
-    xg_per_game = None
-    if statsbomb_kpis:
-        xg_per_game = statsbomb_kpis.get("xG pro Spiel")
-        if xg_per_game is None:
-            xg_per_game = statsbomb_kpis.get("xG")
-
-    return {
-        "team": table_kpis["team"],
-        "league": table_kpis["league"],
-        "season": table_kpis["season"],
-        "Tore": table_kpis["Tore"],
-        "Gegentore": table_kpis["Gegentore"],
-        "xG": xg_per_game,
-        "Chancenverwertung": statsbomb_kpis.get("Chancenverwertung") if statsbomb_kpis else None,
-        "Druckresistenz": statsbomb_kpis.get("Druckresistenz") if statsbomb_kpis else None,
-        "statsbomb_season_used": statsbomb_season_used if statsbomb_kpis else None,
-    }
+# =====================================================
+# 5) UI-Bausteine: KPI-Card + Sentiment-Card + Wortwolke
+# =====================================================
 
 def render_kpi_card(
     label: str,
@@ -320,6 +139,65 @@ def render_kpi_card(
     )
 
 
+@st.cache_data(show_spinner=False)
+def load_team_sentiment(team_name: str) -> dict | None:
+    """Lädt teambezogene Sentiment-Werte aus der Wikipedia-JSON über den Service."""
+    return get_team_sentiment_for_stats_tab(team_name)
+
+
+def _sentiment_color(sentiment_label: str) -> str:
+    """Mappt die Textstimmung auf die visuelle Punktfarbe."""
+    if "Sehr Positiv" in sentiment_label:
+        return "#16a34a"
+    if "Positiv" in sentiment_label:
+        return "#f97316"
+    return "#eab308"
+
+
+def render_sentiment_section(team_name: str, source_enabled: bool = True):
+    """Rendert die Sentiment-Sektion unterhalb der KPI-Übersicht."""
+    st.markdown("### Sentiment Analyse")
+
+    if not source_enabled:
+        st.info("Datenquelle Wikipedia ist deaktiviert.")
+        return
+
+    if not team_name or team_name == "Alle Teams":
+        st.info("Bitte ein konkretes Team auswählen, um den Sentiment-Wert anzuzeigen.")
+        return
+
+    team_sentiment = load_team_sentiment(team_name)
+    if team_sentiment is None:
+        st.info("Für dieses Team sind aktuell keine Sentiment-Daten verfügbar.")
+        return
+
+    # Der Emoji-Punkt im Text wird entfernt, da die Farbkugel die Bewertung bereits visualisiert.
+    mood = team_sentiment["label"]
+    point_color = _sentiment_color(mood)
+    mood_text = mood.replace("🟢 ", "").replace("🟠 ", "").replace("🟡 ", "")
+    st.markdown(
+        f"""
+        <div style="
+            margin-top: 0.15rem;
+            padding: 0.9rem 1rem;
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: linear-gradient(135deg, rgba(241, 245, 249, 0.95) 0%, rgba(255, 255, 255, 0.96) 100%);
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+        ">
+            <div style="font-size: 0.72rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.05em;">Wikipedia Sentiment</div>
+            <div style="margin-top: 0.35rem; font-size: 1.35rem; font-weight: 850; color: #0f172a; line-height: 1;">{team_sentiment['score']:.4f}</div>
+            <div style="margin-top: 0.45rem; font-size: 0.95rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 0.45rem;">
+                <span style="display: inline-block; width: 0.72rem; height: 0.72rem; border-radius: 999px; background: {point_color};"></span>
+                <span>{mood_text}</span>
+            </div>
+            <div style="margin-top: 0.28rem; font-size: 0.75rem; color: #475569;">Verein: {team_sentiment['team']}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_wordcloud_placeholder(source: str = "", disabled: bool = False, team_name: str = ""):
     """Zeigt eine echte Wortwolke für das ausgewählte Team an."""
     selected_team = team_name if team_name and team_name != "Alle Teams" else ""
@@ -338,21 +216,8 @@ def render_wordcloud_placeholder(source: str = "", disabled: bool = False, team_
 
 
 def _build_comparison_chart_data(liga: str, saison: str, team_name: str) -> tuple[pd.DataFrame, dict | None]:
-    kpis = load_leistung_kpis_from_db(liga, saison, team_name)
-    if kpis is None:
-        return pd.DataFrame({"Metrik": ["Tore", "xG-Index pro Spiel", "Gegentore"], "Wert": [0, None, 0]}), None
-
-    xg_index = round(kpis["xG"] * 10, 1) if kpis["xG"] is not None else None
-
-    chart_data = pd.DataFrame({
-        "Metrik": ["Tore", "xG-Index pro Spiel", "Gegentore"],
-        "Wert": [
-            kpis["Tore"],
-            xg_index,
-            kpis["Gegentore"],
-        ],
-    })
-    return chart_data, kpis
+    """Baut die drei Vergleichsmetriken (Tore, xG-Index, Gegentore) für ein Team."""
+    return build_comparison_chart_data_for_stats_tab(liga, saison, team_name)
 
 
 def _build_comparison_figure(
@@ -361,6 +226,7 @@ def _build_comparison_figure(
     color_map: dict,
     shared_y_max: float,
 ):
+    """Erstellt das Plotly-Balkendiagramm für ein Team."""
     plot_data = chart_data.copy()
     # Render exact KPI values; zero must stay zero to avoid misleading bar heights.
     plot_data["Anzeigewert"] = plot_data["Wert"]
@@ -400,6 +266,7 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
     if all_teams is None:
         all_teams = ["Bayern", "Dortmund", "Leverkusen", "Mainz", "Leipzig"]
     
+    # Grid: oben Team-Filter, unten die beiden Vergleichs-Charts.
     top_left, top_right = st.columns(2, gap="medium")
     bottom_left, bottom_right = st.columns(2, gap="medium")
     
@@ -424,6 +291,7 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
     left_team_source_key = "compare_team_left_source"
     right_team_key = "compare_team_right"
 
+    # Linkes Team wird bei Wechsel des Fokus-Teams automatisch synchronisiert.
     if st.session_state.get(left_team_source_key) != team_name or left_team_key not in st.session_state:
         st.session_state[left_team_key] = team_name
         st.session_state[left_team_source_key] = team_name
@@ -453,6 +321,7 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
     st.session_state[left_team_key] = left_current_team
     st.session_state[right_team_key] = right_current_team
 
+    # Obere Filterleiste links/rechts.
     with top_left:
         with st.container(border=True):
             filter_label_col, filter_input_col = st.columns([1, 2], gap="small")
@@ -489,6 +358,7 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
 
             st.caption(f"Vergleich in gleicher Liga/Saison: {selected_liga} · {selected_saison}")
 
+    # Datengrundlage für beide Charts laden und gemeinsame Y-Achse bestimmen.
     left_chart_data, left_kpis = _build_comparison_chart_data(selected_liga, selected_saison, left_team)
     right_chart_data, right_kpis = _build_comparison_chart_data(selected_liga, selected_saison, right_team)
     left_label = left_kpis["team"] if left_kpis else left_team
@@ -528,12 +398,13 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
 
 
 def render_statistics_tab() -> None:
+    """Entry-Point des Statistik-Tabs: Filter oben, Inhalte darunter."""
     st.markdown("""
     <style>
         .stats-focus-team {
             color: #2d5a27;
             font-weight: 700;
-            font-size: 1.35rem;
+            font-size: 1.6rem;
             margin-top: 0.45rem;
             margin-bottom: 0.1rem;
         }
@@ -543,6 +414,7 @@ def render_statistics_tab() -> None:
     </style>
     """, unsafe_allow_html=True)
 
+    # Filterkopf mit Liga/Saison/Team für den gesamten Tab.
     liga_options = get_available_leagues()
 
     with st.container():
@@ -576,6 +448,7 @@ def render_statistics_tab() -> None:
 
         st.caption("Teams mit dem Zusatz '(ohne Wikipedia)' haben aktuell keine verfügbare Wortwolke.")
 
+    # Fokuszeile zeigt, welches Team aktuell die KPI- und Sentimentkarten steuert.
     team_heading = team if team != "Alle Teams" else "Alle Teams"
     st.markdown(
         f'<div class="stats-focus-team">Verein im Fokus: {team_heading}</div>',
@@ -585,13 +458,13 @@ def render_statistics_tab() -> None:
     render_statistics(liga=liga, saison=saison, team=team)
 
 
-#-----------------------------------------------------
-# Seiteneinteilung 
-#-----------------------------------------------------
+# =====================================================
+# 6) Seitenlogik: KPI-Bereich, Sentiment, Wortwolke, Vergleich
+# =====================================================
 
 def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict = None):
     
-    # Wenn sources_enabled nicht übergeben wird, alle aktivieren
+    # Wenn keine Quellenauswahl übergeben wurde, sind alle Datenquellen aktiv.
     if sources_enabled is None:
         sources_enabled = {
             "OpenligaDB": True,
@@ -606,14 +479,14 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         st.info("Bitte waehle eine konkrete Saison aus. Mit 'Alle Saisons' sind KPI-Werte nicht eindeutig interpretierbar.")
         return
     
-    # ===== BEREICH 1: KPIs & Wortwolke =====
+    # Bereich 1: KPI-Karten links, Wortwolke rechts.
 
     kpi_data = load_top_kpis_from_db(liga, saison, team)
     if kpi_data is None:
         st.warning("Für die aktuelle Filterwahl sind in soccer.db keine OpenLigaDB-KPIs verfügbar.")
     leistung_kpis = load_leistung_kpis_from_db(liga, saison, team)
     
-    # Definiere Quellen für jedes Element
+    # Quellen-Mapping steuert, welche UI-Elemente bei deaktivierten Quellen ausgegraut werden.
     elements_sources = {
         "Platz": "OpenligaDB",
         "Punkte": "OpenligaDB",
@@ -638,6 +511,7 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         "StatsBomb-Kennzahl": "#4f46e5",
     }
 
+    # Reihenfolge und Gruppierung der KPI-Karten im 3x3-Raster.
     kpi_rows = [
         [
             {"label": "Platz", "value": kpi_data["Platz"] if kpi_data else "-", "unit": ".", "detail": "", "source": elements_sources["Platz"]},
@@ -659,6 +533,8 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
     kpi_col, wordcloud_col = st.columns([0.88, 1.52], gap="large")
 
     with kpi_col:
+        # Überschrift für den KPI-Block (gleiche Größenlogik wie Sentiment-Überschrift).
+        st.markdown("### Übersicht")
         for row_items in kpi_rows:
             row_cols = st.columns(3, gap="small")
             for index, card in enumerate(row_items):
@@ -674,6 +550,13 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
                         detail=card["detail"],
                     )
 
+        st.markdown("<div style='height: 0.35rem;'></div>", unsafe_allow_html=True)
+        # Sentiment wird direkt unter den KPI-Reihen angezeigt.
+        render_sentiment_section(
+            team_name=team,
+            source_enabled=elements_sources["WordCloud"] in sources_selected,
+        )
+
     with wordcloud_col:
         is_disabled = elements_sources["WordCloud"] not in sources_selected
         render_wordcloud_placeholder(
@@ -682,17 +565,17 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
             team_name=team
         )
 
+    # Zusatzhinweis, wenn kein konkretes Team ausgewählt ist.
     if kpi_data and team == "Alle Teams":
         st.caption(f"KPI-Werte zeigen aktuell: {kpi_data['team']} · {kpi_data['league']} · {kpi_data['season']}")
     if kpi_data:
+        # Kurzer Datenstand-Hinweis unter dem oberen Bereich.
         st.caption(
-            f"Datenstand OpenLigaDB: {kpi_data['Spiele']} Spiele · "
-            f"{kpi_data['Siege']}S/{kpi_data['Unentschieden']}U/{kpi_data['Niederlagen']}N · "
-            f"Quellen: OpenLigaDB (Felder 1-7), StatsBomb (Felder 8-9)"
+            f"Datenstand OpenLigaDB: {kpi_data['Spiele']} Spiele"
         )
 
     st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3; margin-top: 1rem; margin-bottom: 1rem;'>", unsafe_allow_html=True)
     
-    # ===== BEREICH 2: Team-Vergleich =====
+    # Bereich 2: direkter Teamvergleich mit zwei synchronen Diagrammen.
     st.markdown(f"### Team-Vergleich · {liga} · {saison}")
     render_comparison_chart(team, liga, saison, ["Bayern", "Dortmund", "Leverkusen", "Mainz", "Leipzig"])
