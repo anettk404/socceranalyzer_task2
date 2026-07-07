@@ -1,0 +1,572 @@
+{
+    "1. FC Köln": {
+        "Verein": "1. FC Köln",
+        "Chancen_Qualitaet_xG": 2.7,
+        "xG_Pro_Spiel": 1.33,
+        "Tor_Effizienz_Delta": -0.7,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 250
+    },
+    "1. FSV Mainz 05": {
+        "Verein": "1. FSV Mainz 05",
+        "Chancen_Qualitaet_xG": 2.7,
+        "xG_Pro_Spiel": 1.36,
+        "Tor_Effizienz_Delta": 0.3,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 3,
+        "Druckereignisse": 465
+    },
+    "AC Florenz": {
+        "Verein": "AC Florenz",
+        "Chancen_Qualitaet_xG": 53.8,
+        "xG_Pro_Spiel": 1.42,
+        "Tor_Effizienz_Delta": 4.2,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 58,
+        "Druckereignisse": 6116
+    },
+    "AC Mailand": {
+        "Verein": "AC Mailand",
+        "Chancen_Qualitaet_xG": 53.7,
+        "xG_Pro_Spiel": 1.41,
+        "Tor_Effizienz_Delta": -4.7,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 49,
+        "Druckereignisse": 6308
+    },
+    "AFC Bournemouth": {
+        "Verein": "AFC Bournemouth",
+        "Chancen_Qualitaet_xG": 40.4,
+        "xG_Pro_Spiel": 1.06,
+        "Tor_Effizienz_Delta": 2.6,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 43,
+        "Druckereignisse": 6210
+    },
+    "AS Rom": {
+        "Verein": "AS Rom",
+        "Chancen_Qualitaet_xG": 61.9,
+        "xG_Pro_Spiel": 1.63,
+        "Tor_Effizienz_Delta": 21.1,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 83,
+        "Druckereignisse": 5798
+    },
+    "Arsenal FC": {
+        "Verein": "Arsenal FC",
+        "Chancen_Qualitaet_xG": 65.1,
+        "xG_Pro_Spiel": 1.71,
+        "Tor_Effizienz_Delta": -3.1,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 62,
+        "Druckereignisse": 5227
+    },
+    "Aston Villa": {
+        "Verein": "Aston Villa",
+        "Chancen_Qualitaet_xG": 29.6,
+        "xG_Pro_Spiel": 0.78,
+        "Tor_Effizienz_Delta": -4.6,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 25,
+        "Druckereignisse": 6235
+    },
+    "Atalanta Bergamo": {
+        "Verein": "Atalanta Bergamo",
+        "Chancen_Qualitaet_xG": 42.4,
+        "xG_Pro_Spiel": 1.11,
+        "Tor_Effizienz_Delta": -4.4,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 38,
+        "Druckereignisse": 6797
+    },
+    "Bayer 04 Leverkusen": {
+        "Verein": "Bayer 04 Leverkusen",
+        "Chancen_Qualitaet_xG": 49.8,
+        "xG_Pro_Spiel": 1.46,
+        "Tor_Effizienz_Delta": 1.2,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 34,
+        "Tore": 51,
+        "Druckereignisse": 6027
+    },
+    "Borussia Dortmund": {
+        "Verein": "Borussia Dortmund",
+        "Chancen_Qualitaet_xG": 4.8,
+        "xG_Pro_Spiel": 2.4,
+        "Tor_Effizienz_Delta": -0.8,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 4,
+        "Druckereignisse": 417
+    },
+    "Borussia Mönchengladbach": {
+        "Verein": "Borussia Mönchengladbach",
+        "Chancen_Qualitaet_xG": 1.3,
+        "xG_Pro_Spiel": 0.65,
+        "Tor_Effizienz_Delta": 0.7,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 347
+    },
+    "Carpi FC": {
+        "Verein": "Carpi FC",
+        "Chancen_Qualitaet_xG": 41.0,
+        "xG_Pro_Spiel": 1.08,
+        "Tor_Effizienz_Delta": -8.0,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 33,
+        "Druckereignisse": 7753
+    },
+    "Chelsea FC": {
+        "Verein": "Chelsea FC",
+        "Chancen_Qualitaet_xG": 53.6,
+        "xG_Pro_Spiel": 1.41,
+        "Tor_Effizienz_Delta": 1.4,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 55,
+        "Druckereignisse": 5812
+    },
+    "Chievo Verona": {
+        "Verein": "Chievo Verona",
+        "Chancen_Qualitaet_xG": 42.9,
+        "xG_Pro_Spiel": 1.13,
+        "Tor_Effizienz_Delta": -8.9,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 34,
+        "Druckereignisse": 6709
+    },
+    "Crystal Palace FC": {
+        "Verein": "Crystal Palace FC",
+        "Chancen_Qualitaet_xG": 42.4,
+        "xG_Pro_Spiel": 1.12,
+        "Tor_Effizienz_Delta": -4.4,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 38,
+        "Druckereignisse": 5786
+    },
+    "Eintracht Frankfurt": {
+        "Verein": "Eintracht Frankfurt",
+        "Chancen_Qualitaet_xG": 1.9,
+        "xG_Pro_Spiel": 0.96,
+        "Tor_Effizienz_Delta": -0.9,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 1,
+        "Druckereignisse": 412
+    },
+    "Empoli FC": {
+        "Verein": "Empoli FC",
+        "Chancen_Qualitaet_xG": 36.9,
+        "xG_Pro_Spiel": 0.97,
+        "Tor_Effizienz_Delta": 2.1,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 39,
+        "Druckereignisse": 6040
+    },
+    "Everton FC": {
+        "Verein": "Everton FC",
+        "Chancen_Qualitaet_xG": 50.6,
+        "xG_Pro_Spiel": 1.33,
+        "Tor_Effizienz_Delta": 5.4,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 56,
+        "Druckereignisse": 5500
+    },
+    "FC Augsburg": {
+        "Verein": "FC Augsburg",
+        "Chancen_Qualitaet_xG": 1.1,
+        "xG_Pro_Spiel": 0.57,
+        "Tor_Effizienz_Delta": 1.9,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 3,
+        "Druckereignisse": 430
+    },
+    "FC Bayern München": {
+        "Verein": "FC Bayern München",
+        "Chancen_Qualitaet_xG": 3.8,
+        "xG_Pro_Spiel": 1.89,
+        "Tor_Effizienz_Delta": -0.8,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 3,
+        "Druckereignisse": 240
+    },
+    "FC Bologna": {
+        "Verein": "FC Bologna",
+        "Chancen_Qualitaet_xG": 32.3,
+        "xG_Pro_Spiel": 0.85,
+        "Tor_Effizienz_Delta": 0.7,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 33,
+        "Druckereignisse": 6953
+    },
+    "FC Genua": {
+        "Verein": "FC Genua",
+        "Chancen_Qualitaet_xG": 42.9,
+        "xG_Pro_Spiel": 1.13,
+        "Tor_Effizienz_Delta": 1.1,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 44,
+        "Druckereignisse": 6791
+    },
+    "FC Ingolstadt 04": {
+        "Verein": "FC Ingolstadt 04",
+        "Chancen_Qualitaet_xG": 4.0,
+        "xG_Pro_Spiel": 1.99,
+        "Tor_Effizienz_Delta": -2.0,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 334
+    },
+    "FC Liverpool": {
+        "Verein": "FC Liverpool",
+        "Chancen_Qualitaet_xG": 58.4,
+        "xG_Pro_Spiel": 1.54,
+        "Tor_Effizienz_Delta": 3.6,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 62,
+        "Druckereignisse": 6540
+    },
+    "FC Schalke 04": {
+        "Verein": "FC Schalke 04",
+        "Chancen_Qualitaet_xG": 3.5,
+        "xG_Pro_Spiel": 1.74,
+        "Tor_Effizienz_Delta": -0.5,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 3,
+        "Druckereignisse": 356
+    },
+    "FC Turin": {
+        "Verein": "FC Turin",
+        "Chancen_Qualitaet_xG": 49.0,
+        "xG_Pro_Spiel": 1.29,
+        "Tor_Effizienz_Delta": 0.0,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 49,
+        "Druckereignisse": 6412
+    },
+    "FC Watford": {
+        "Verein": "FC Watford",
+        "Chancen_Qualitaet_xG": 44.1,
+        "xG_Pro_Spiel": 1.16,
+        "Tor_Effizienz_Delta": -8.1,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 36,
+        "Druckereignisse": 5660
+    },
+    "Hamburger SV": {
+        "Verein": "Hamburger SV",
+        "Chancen_Qualitaet_xG": 1.7,
+        "xG_Pro_Spiel": 0.85,
+        "Tor_Effizienz_Delta": -1.7,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 0,
+        "Druckereignisse": 410
+    },
+    "Hannover 96": {
+        "Verein": "Hannover 96",
+        "Chancen_Qualitaet_xG": 0.3,
+        "xG_Pro_Spiel": 0.17,
+        "Tor_Effizienz_Delta": -0.3,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 0,
+        "Druckereignisse": 376
+    },
+    "Hellas Verona": {
+        "Verein": "Hellas Verona",
+        "Chancen_Qualitaet_xG": 42.9,
+        "xG_Pro_Spiel": 1.13,
+        "Tor_Effizienz_Delta": -8.9,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 34,
+        "Druckereignisse": 6709
+    },
+    "Hertha BSC": {
+        "Verein": "Hertha BSC",
+        "Chancen_Qualitaet_xG": 1.5,
+        "xG_Pro_Spiel": 0.75,
+        "Tor_Effizienz_Delta": 1.5,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 3,
+        "Druckereignisse": 348
+    },
+    "Inter Mailand": {
+        "Verein": "Inter Mailand",
+        "Chancen_Qualitaet_xG": 51.4,
+        "xG_Pro_Spiel": 1.35,
+        "Tor_Effizienz_Delta": -2.4,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 49,
+        "Druckereignisse": 6639
+    },
+    "Juventus Turin": {
+        "Verein": "Juventus Turin",
+        "Chancen_Qualitaet_xG": 61.7,
+        "xG_Pro_Spiel": 1.62,
+        "Tor_Effizienz_Delta": 10.3,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 72,
+        "Druckereignisse": 5591
+    },
+    "Lazio Rom": {
+        "Verein": "Lazio Rom",
+        "Chancen_Qualitaet_xG": 50.4,
+        "xG_Pro_Spiel": 1.33,
+        "Tor_Effizienz_Delta": 1.6,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 52,
+        "Druckereignisse": 6682
+    },
+    "Leicester City": {
+        "Verein": "Leicester City",
+        "Chancen_Qualitaet_xG": 66.3,
+        "xG_Pro_Spiel": 1.74,
+        "Tor_Effizienz_Delta": 0.7,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 67,
+        "Druckereignisse": 6231
+    },
+    "Manchester City FC": {
+        "Verein": "Manchester City FC",
+        "Chancen_Qualitaet_xG": 64.6,
+        "xG_Pro_Spiel": 1.7,
+        "Tor_Effizienz_Delta": 6.4,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 71,
+        "Druckereignisse": 5403
+    },
+    "Manchester United FC": {
+        "Verein": "Manchester United FC",
+        "Chancen_Qualitaet_xG": 42.2,
+        "xG_Pro_Spiel": 1.11,
+        "Tor_Effizienz_Delta": 3.8,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 46,
+        "Druckereignisse": 5656
+    },
+    "Newcastle United FC": {
+        "Verein": "Newcastle United FC",
+        "Chancen_Qualitaet_xG": 40.7,
+        "xG_Pro_Spiel": 1.07,
+        "Tor_Effizienz_Delta": 2.3,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 43,
+        "Druckereignisse": 6105
+    },
+    "Norwich City": {
+        "Verein": "Norwich City",
+        "Chancen_Qualitaet_xG": 38.9,
+        "xG_Pro_Spiel": 1.02,
+        "Tor_Effizienz_Delta": -0.9,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 38,
+        "Druckereignisse": 5299
+    },
+    "SSC Neapel": {
+        "Verein": "SSC Neapel",
+        "Chancen_Qualitaet_xG": 64.6,
+        "xG_Pro_Spiel": 1.7,
+        "Tor_Effizienz_Delta": 13.4,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 78,
+        "Druckereignisse": 5864
+    },
+    "SV Darmstadt 98": {
+        "Verein": "SV Darmstadt 98",
+        "Chancen_Qualitaet_xG": 1.7,
+        "xG_Pro_Spiel": 0.84,
+        "Tor_Effizienz_Delta": 0.3,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 401
+    },
+    "SV Werder Bremen": {
+        "Verein": "SV Werder Bremen",
+        "Chancen_Qualitaet_xG": 2.3,
+        "xG_Pro_Spiel": 1.13,
+        "Tor_Effizienz_Delta": 1.7,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 4,
+        "Druckereignisse": 354
+    },
+    "Sampdoria Genua": {
+        "Verein": "Sampdoria Genua",
+        "Chancen_Qualitaet_xG": 40.4,
+        "xG_Pro_Spiel": 1.06,
+        "Tor_Effizienz_Delta": 4.6,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 45,
+        "Druckereignisse": 6332
+    },
+    "Sassuolo": {
+        "Verein": "Sassuolo",
+        "Chancen_Qualitaet_xG": 44.9,
+        "xG_Pro_Spiel": 1.18,
+        "Tor_Effizienz_Delta": 3.1,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 48,
+        "Druckereignisse": 6652
+    },
+    "Southampton FC": {
+        "Verein": "Southampton FC",
+        "Chancen_Qualitaet_xG": 54.2,
+        "xG_Pro_Spiel": 1.43,
+        "Tor_Effizienz_Delta": 2.8,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 57,
+        "Druckereignisse": 5718
+    },
+    "Stoke City FC": {
+        "Verein": "Stoke City FC",
+        "Chancen_Qualitaet_xG": 40.4,
+        "xG_Pro_Spiel": 1.06,
+        "Tor_Effizienz_Delta": -0.4,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 40,
+        "Druckereignisse": 5591
+    },
+    "Sunderland AFC": {
+        "Verein": "Sunderland AFC",
+        "Chancen_Qualitaet_xG": 42.5,
+        "xG_Pro_Spiel": 1.12,
+        "Tor_Effizienz_Delta": 1.5,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 44,
+        "Druckereignisse": 6001
+    },
+    "Swansea City": {
+        "Verein": "Swansea City",
+        "Chancen_Qualitaet_xG": 42.1,
+        "xG_Pro_Spiel": 1.11,
+        "Tor_Effizienz_Delta": -1.1,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 41,
+        "Druckereignisse": 5675
+    },
+    "TSG Hoffenheim": {
+        "Verein": "TSG Hoffenheim",
+        "Chancen_Qualitaet_xG": 1.7,
+        "xG_Pro_Spiel": 0.84,
+        "Tor_Effizienz_Delta": 0.3,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 402
+    },
+    "Tottenham Hotspur FC": {
+        "Verein": "Tottenham Hotspur FC",
+        "Chancen_Qualitaet_xG": 62.4,
+        "xG_Pro_Spiel": 1.64,
+        "Tor_Effizienz_Delta": 5.6,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 68,
+        "Druckereignisse": 6021
+    },
+    "US Palermo": {
+        "Verein": "US Palermo",
+        "Chancen_Qualitaet_xG": 35.5,
+        "xG_Pro_Spiel": 0.93,
+        "Tor_Effizienz_Delta": 1.5,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 37,
+        "Druckereignisse": 6927
+    },
+    "Udinese Calcio": {
+        "Verein": "Udinese Calcio",
+        "Chancen_Qualitaet_xG": 45.7,
+        "xG_Pro_Spiel": 1.2,
+        "Tor_Effizienz_Delta": -11.7,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 34,
+        "Druckereignisse": 6625
+    },
+    "VfB Stuttgart": {
+        "Verein": "VfB Stuttgart",
+        "Chancen_Qualitaet_xG": 2.7,
+        "xG_Pro_Spiel": 1.35,
+        "Tor_Effizienz_Delta": 0.3,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 3,
+        "Druckereignisse": 411
+    },
+    "VfL Wolfsburg": {
+        "Verein": "VfL Wolfsburg",
+        "Chancen_Qualitaet_xG": 2.9,
+        "xG_Pro_Spiel": 1.44,
+        "Tor_Effizienz_Delta": -0.9,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 406
+    },
+    "West Bromwich Albion": {
+        "Verein": "West Bromwich Albion",
+        "Chancen_Qualitaet_xG": 38.6,
+        "xG_Pro_Spiel": 1.02,
+        "Tor_Effizienz_Delta": -6.6,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 32,
+        "Druckereignisse": 5703
+    },
+    "West Ham United FC": {
+        "Verein": "West Ham United FC",
+        "Chancen_Qualitaet_xG": 54.5,
+        "xG_Pro_Spiel": 1.43,
+        "Tor_Effizienz_Delta": 9.5,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 38,
+        "Tore": 64,
+        "Druckereignisse": 5029
+    }
+}

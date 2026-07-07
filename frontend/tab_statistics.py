@@ -254,20 +254,35 @@ def load_leistung_kpis_from_db(liga: str, saison: str, team_name: str) -> dict |
         "season": table_kpis["season"],
         "Tore": table_kpis["Tore"],
         "Gegentore": table_kpis["Gegentore"],
+        "xG": statsbomb_kpis["xG pro Spiel"] if statsbomb_kpis else None,
         "Chancenverwertung": statsbomb_kpis["Chancenverwertung"] if statsbomb_kpis else None,
         "Druckresistenz": statsbomb_kpis["Druckresistenz"] if statsbomb_kpis else None,
     }
 
 def render_kpi_card(label: str, value: str | int, unit: str = "", source: str = "", disabled: bool = False):
-    """Rendert eine KPI-Karte mit Label und Wert. Kann ausgegraut werden."""
-    opacity = "0.4" if disabled else "1"
-    with st.container(border=True):
-        if disabled:
-            st.markdown(f"<div style='opacity: {opacity}'><strong>{label}</strong><br>({value} {unit})</div>", unsafe_allow_html=True)
-        else:
-            st.metric(label=label, value=f"{value} {unit}".strip())
-        if source:
-            st.caption(f"📊 {source}")
+    """Rendert eine KPI-Karte im Gruenton des Statistik-UI."""
+    display_value = f"{value} {unit}".strip()
+    opacity = "0.48" if disabled else "1"
+    st.markdown(
+        f"""
+        <div style="
+            opacity: {opacity};
+            min-height: 98px;
+            padding: 0.7rem 0.75rem 0.65rem 0.75rem;
+            border-radius: 14px;
+            border: 1px solid #cfe4d2;
+            background: linear-gradient(180deg, #f4fbf5 0%, #e6f4e9 100%);
+            box-shadow: 0 10px 24px rgba(45, 90, 39, 0.06);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        ">
+            <div style="font-size: 0.8rem; font-weight: 700; color: #2d5a27; line-height: 1.15;">{label}</div>
+            <div style="font-size: 1.55rem; font-weight: 800; color: #17351a; line-height: 1.05; margin-top: 0.2rem;">{display_value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_wordcloud_placeholder(source: str = "", disabled: bool = False, team_name: str = ""):
@@ -291,13 +306,13 @@ def render_wordcloud_placeholder(source: str = "", disabled: bool = False, team_
 def _build_comparison_chart_data(liga: str, saison: str, team_name: str) -> tuple[pd.DataFrame, dict | None]:
     kpis = load_leistung_kpis_from_db(liga, saison, team_name)
     if kpis is None:
-        return pd.DataFrame({"Metrik": ["Tore", "Chancenverwertung", "Gegentore"], "Wert": [0, 0, 0]}), None
+        return pd.DataFrame({"Metrik": ["Tore", "xG pro Spiel", "Gegentore"], "Wert": [0, None, 0]}), None
 
     chart_data = pd.DataFrame({
-        "Metrik": ["Tore", "Chancenverwertung", "Gegentore"],
+        "Metrik": ["Tore", "xG pro Spiel", "Gegentore"],
         "Wert": [
             kpis["Tore"],
-            kpis["Chancenverwertung"] if kpis["Chancenverwertung"] is not None else 0,
+            kpis["xG"],
             kpis["Gegentore"],
         ],
     })
@@ -313,7 +328,9 @@ def _build_comparison_figure(
     plot_data = chart_data.copy()
     # Render exact KPI values; zero must stay zero to avoid misleading bar heights.
     plot_data["Anzeigewert"] = plot_data["Wert"]
-    plot_data["Wert_Label"] = plot_data["Wert"].apply(lambda value: f"{value:.1f}" if isinstance(value, float) else str(value))
+    plot_data["Wert_Label"] = plot_data["Wert"].apply(
+        lambda value: "n/a" if pd.isna(value) else (f"{value:.1f}" if isinstance(value, float) else str(value))
+    )
 
     fig = px.bar(
         plot_data,
@@ -353,7 +370,7 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
     # Farben für die drei Metriken
     color_map = {
         "Tore": "#7ec97e",        # Helles Grün
-        "Chancenverwertung": "#4a7c59",     # Mittleres Grün
+        "xG pro Spiel": "#4a7c59", # Mittleres Grün
         "Gegentore": "#2d5a27"    # Dunkles Grün
     }
 
@@ -395,7 +412,9 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
     right_chart_data, right_kpis = _build_comparison_chart_data(selected_liga, selected_saison, selected_team)
     left_label = left_kpis["team"] if left_kpis else team_name
     right_label = right_kpis["team"] if right_kpis else selected_team
-    shared_y_max = max(left_chart_data["Wert"].max(), right_chart_data["Wert"].max(), 1)
+    left_max = left_chart_data["Wert"].fillna(0).max()
+    right_max = right_chart_data["Wert"].fillna(0).max()
+    shared_y_max = max(left_max, right_max, 1)
     shared_y_max = max(10, shared_y_max * 1.15)
 
     with bottom_left:
@@ -406,8 +425,8 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
             shared_y_max,
         )
         st.plotly_chart(fig, width="stretch")
-        if left_kpis and left_kpis["Chancenverwertung"] is None:
-            st.caption("Für dieses Team liegen in StatsBomb aktuell keine Vergleichsdaten vor.")
+        if left_kpis and left_kpis["xG"] is None:
+            st.caption("Für dieses Team liegen in StatsBomb aktuell keine xG-Vergleichsdaten vor.")
 
     with bottom_right:
         fig = _build_comparison_figure(
@@ -417,8 +436,8 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
             shared_y_max,
         )
         st.plotly_chart(fig, width="stretch")
-        if right_kpis and right_kpis["Chancenverwertung"] is None:
-            st.caption("Für dieses Vergleichsteam liegen in StatsBomb aktuell keine Vergleichsdaten vor.")
+        if right_kpis and right_kpis["xG"] is None:
+            st.caption("Für dieses Vergleichsteam liegen in StatsBomb aktuell keine xG-Vergleichsdaten vor.")
 
 
 def render_statistics_tab() -> None:
@@ -430,6 +449,9 @@ def render_statistics_tab() -> None:
             font-size: 1.35rem;
             margin-top: 0.45rem;
             margin-bottom: 0.1rem;
+        }
+        div[data-testid="column"] .stMarkdown {
+            width: 100%;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -513,6 +535,7 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         "Platz": "OpenligaDB",
         "Punkte": "OpenligaDB",
         "Siege": "OpenligaDB",
+        "Unentschieden": "OpenligaDB",
         "Niederlagen": "OpenligaDB",
         "Tore": "OpenligaDB",
         "Gegentore": "OpenligaDB",
@@ -524,6 +547,7 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         ("Platz", kpi_data["Platz"] if kpi_data else "-", "."),
         ("Punkte", kpi_data["Punkte"] if kpi_data else "-", "Pkt"),
         ("Siege", kpi_data["Siege"] if kpi_data else "-", ""),
+        ("Unentschieden", kpi_data["Unentschieden"] if kpi_data else "-", ""),
         ("Niederlagen", kpi_data["Niederlagen"] if kpi_data else "-", ""),
         ("Tore", leistung_kpis["Tore"] if leistung_kpis else "-", ""),
         ("Gegentore", leistung_kpis["Gegentore"] if leistung_kpis else "-", ""),
@@ -541,7 +565,8 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
     if kpi_data:
         st.caption(
             f"Datenstand OpenLigaDB: {kpi_data['Spiele']} Spiele · "
-            f"{kpi_data['Siege']}S/{kpi_data['Unentschieden']}U/{kpi_data['Niederlagen']}N"
+            f"{kpi_data['Siege']}S/{kpi_data['Unentschieden']}U/{kpi_data['Niederlagen']}N · "
+            f"Quellen: OpenLigaDB (Felder 1-7), StatsBomb (Feld 8)"
         )
 
     st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3; margin-top: 1rem; margin-bottom: 1rem;'>", unsafe_allow_html=True)

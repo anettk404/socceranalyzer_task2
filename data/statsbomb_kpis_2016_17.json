@@ -1,0 +1,202 @@
+{
+    "Athletic Club": {
+        "Verein": "Athletic Club",
+        "Chancen_Qualitaet_xG": 1.4,
+        "xG_Pro_Spiel": 0.69,
+        "Tor_Effizienz_Delta": -1.4,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 0,
+        "Druckereignisse": 337
+    },
+    "Atlético Madrid": {
+        "Verein": "Atlético Madrid",
+        "Chancen_Qualitaet_xG": 1.6,
+        "xG_Pro_Spiel": 0.8,
+        "Tor_Effizienz_Delta": 0.4,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 458
+    },
+    "CA Osasuna": {
+        "Verein": "CA Osasuna",
+        "Chancen_Qualitaet_xG": 0.2,
+        "xG_Pro_Spiel": 0.08,
+        "Tor_Effizienz_Delta": 0.8,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 1,
+        "Druckereignisse": 421
+    },
+    "CD Leganes": {
+        "Verein": "CD Leganes",
+        "Chancen_Qualitaet_xG": 2.2,
+        "xG_Pro_Spiel": 1.09,
+        "Tor_Effizienz_Delta": -0.2,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 351
+    },
+    "Celta Vigo": {
+        "Verein": "Celta Vigo",
+        "Chancen_Qualitaet_xG": 0.5,
+        "xG_Pro_Spiel": 0.49,
+        "Tor_Effizienz_Delta": -0.5,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 1,
+        "Tore": 0,
+        "Druckereignisse": 172
+    },
+    "Deportivo Alaves": {
+        "Verein": "Deportivo Alaves",
+        "Chancen_Qualitaet_xG": 1.8,
+        "xG_Pro_Spiel": 0.91,
+        "Tor_Effizienz_Delta": 0.2,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 316
+    },
+    "Deportivo La Coruna": {
+        "Verein": "Deportivo La Coruna",
+        "Chancen_Qualitaet_xG": 1.8,
+        "xG_Pro_Spiel": 0.92,
+        "Tor_Effizienz_Delta": 0.2,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 355
+    },
+    "Espanyol Barcelona": {
+        "Verein": "Espanyol Barcelona",
+        "Chancen_Qualitaet_xG": 74.1,
+        "xG_Pro_Spiel": 2.18,
+        "Tor_Effizienz_Delta": 27.9,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 34,
+        "Tore": 102,
+        "Druckereignisse": 4451
+    },
+    "FC Barcelona": {
+        "Verein": "FC Barcelona",
+        "Chancen_Qualitaet_xG": 74.1,
+        "xG_Pro_Spiel": 2.18,
+        "Tor_Effizienz_Delta": 27.9,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 34,
+        "Tore": 102,
+        "Druckereignisse": 4451
+    },
+    "FC Malaga": {
+        "Verein": "FC Malaga",
+        "Chancen_Qualitaet_xG": 0.9,
+        "xG_Pro_Spiel": 0.87,
+        "Tor_Effizienz_Delta": 1.1,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 1,
+        "Tore": 2,
+        "Druckereignisse": 168
+    },
+    "FC Valencia": {
+        "Verein": "FC Valencia",
+        "Chancen_Qualitaet_xG": 2.0,
+        "xG_Pro_Spiel": 1.01,
+        "Tor_Effizienz_Delta": 2.0,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 4,
+        "Druckereignisse": 519
+    },
+    "FC Villareal": {
+        "Verein": "FC Villareal",
+        "Chancen_Qualitaet_xG": 1.1,
+        "xG_Pro_Spiel": 0.54,
+        "Tor_Effizienz_Delta": 0.9,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 490
+    },
+    "Granada CF": {
+        "Verein": "Granada CF",
+        "Chancen_Qualitaet_xG": 0.0,
+        "xG_Pro_Spiel": 0.01,
+        "Tor_Effizienz_Delta": -0.0,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 1,
+        "Tore": 0,
+        "Druckereignisse": 217
+    },
+    "Real Betis Balompié": {
+        "Verein": "Real Betis Balompié",
+        "Chancen_Qualitaet_xG": 1.5,
+        "xG_Pro_Spiel": 0.76,
+        "Tor_Effizienz_Delta": 1.5,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 3,
+        "Druckereignisse": 398
+    },
+    "Real Madrid": {
+        "Verein": "Real Madrid",
+        "Chancen_Qualitaet_xG": 3.8,
+        "xG_Pro_Spiel": 1.9,
+        "Tor_Effizienz_Delta": -0.8,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 3,
+        "Druckereignisse": 398
+    },
+    "Real Sociedad": {
+        "Verein": "Real Sociedad",
+        "Chancen_Qualitaet_xG": 2.5,
+        "xG_Pro_Spiel": 1.27,
+        "Tor_Effizienz_Delta": -0.5,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 368
+    },
+    "SD Eibar": {
+        "Verein": "SD Eibar",
+        "Chancen_Qualitaet_xG": 1.7,
+        "xG_Pro_Spiel": 0.84,
+        "Tor_Effizienz_Delta": 0.3,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 2,
+        "Druckereignisse": 437
+    },
+    "Sevilla FC": {
+        "Verein": "Sevilla FC",
+        "Chancen_Qualitaet_xG": 2.0,
+        "xG_Pro_Spiel": 1.01,
+        "Tor_Effizienz_Delta": -1.0,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 1,
+        "Druckereignisse": 458
+    },
+    "Sporting Gijon": {
+        "Verein": "Sporting Gijon",
+        "Chancen_Qualitaet_xG": 1.3,
+        "xG_Pro_Spiel": 1.26,
+        "Tor_Effizienz_Delta": -0.3,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 1,
+        "Tore": 1,
+        "Druckereignisse": 149
+    },
+    "UD Las Palmas": {
+        "Verein": "UD Las Palmas",
+        "Chancen_Qualitaet_xG": 1.3,
+        "xG_Pro_Spiel": 0.64,
+        "Tor_Effizienz_Delta": -0.3,
+        "Druck_Resistenz_Prozent": 100.0,
+        "Spiele": 2,
+        "Tore": 1,
+        "Druckereignisse": 350
+    }
+}
