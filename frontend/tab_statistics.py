@@ -247,38 +247,73 @@ def load_leistung_kpis_from_db(liga: str, saison: str, team_name: str) -> dict |
     if table_kpis is None:
         return None
 
-    statsbomb_kpis = load_statsbomb_kpis_from_db(table_kpis["team"], table_kpis["season"], table_kpis["league"])
+    requested_season = table_kpis["season"]
+    statsbomb_season_used = requested_season
+    statsbomb_kpis = load_statsbomb_kpis_from_db(table_kpis["team"], requested_season, table_kpis["league"])
+
+    # Falls die gewaehlte Saison keine StatsBomb-Daten hat (z. B. 2024/25),
+    # nutze die zuletzt verfuegbare historische Saison fuer das Team.
+    if statsbomb_kpis is None and isinstance(requested_season, str) and "/" in requested_season:
+        try:
+            start_year = int(requested_season.split("/")[0])
+            for candidate_start in range(start_year - 1, 2014, -1):
+                candidate_season = f"{candidate_start}/{str(candidate_start + 1)[-2:]}"
+                fallback = load_statsbomb_kpis_from_db(table_kpis["team"], candidate_season, table_kpis["league"])
+                if fallback is not None:
+                    statsbomb_kpis = fallback
+                    statsbomb_season_used = candidate_season
+                    break
+        except ValueError:
+            pass
+
+    xg_per_game = None
+    if statsbomb_kpis:
+        xg_per_game = statsbomb_kpis.get("xG pro Spiel")
+        if xg_per_game is None:
+            xg_per_game = statsbomb_kpis.get("xG")
+
     return {
         "team": table_kpis["team"],
         "league": table_kpis["league"],
         "season": table_kpis["season"],
         "Tore": table_kpis["Tore"],
         "Gegentore": table_kpis["Gegentore"],
-        "xG": statsbomb_kpis["xG pro Spiel"] if statsbomb_kpis else None,
-        "Chancenverwertung": statsbomb_kpis["Chancenverwertung"] if statsbomb_kpis else None,
-        "Druckresistenz": statsbomb_kpis["Druckresistenz"] if statsbomb_kpis else None,
+        "xG": xg_per_game,
+        "Chancenverwertung": statsbomb_kpis.get("Chancenverwertung") if statsbomb_kpis else None,
+        "Druckresistenz": statsbomb_kpis.get("Druckresistenz") if statsbomb_kpis else None,
+        "statsbomb_season_used": statsbomb_season_used if statsbomb_kpis else None,
     }
 
-def render_kpi_card(label: str, value: str | int, unit: str = "", source: str = "", disabled: bool = False):
-    """Rendert eine KPI-Karte im Gruenton des Statistik-UI."""
+def render_kpi_card(
+    label: str,
+    value: str | int,
+    unit: str = "",
+    source: str = "",
+    disabled: bool = False,
+    accent_color: str = "#2d5a27",
+    detail: str = "",
+):
+    """Rendert eine KPI-Karte mit farbigem Rand im Statistik-UI."""
     display_value = f"{value} {unit}".strip()
     opacity = "0.48" if disabled else "1"
     st.markdown(
         f"""
         <div style="
             opacity: {opacity};
-            min-height: 98px;
-            padding: 0.7rem 0.75rem 0.65rem 0.75rem;
-            border-radius: 14px;
-            border: 1px solid #cfe4d2;
-            background: linear-gradient(180deg, #f4fbf5 0%, #e6f4e9 100%);
-            box-shadow: 0 10px 24px rgba(45, 90, 39, 0.06);
+            min-height: 76px;
+            padding: 0.45rem 0.6rem 0.42rem 0.6rem;
+            border-radius: 15px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-left: 1px solid rgba(148, 163, 184, 0.28);
+            background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 100%);
+            box-shadow: 0 12px 26px rgba(15, 23, 42, 0.10);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         ">
-            <div style="font-size: 0.8rem; font-weight: 700; color: #2d5a27; line-height: 1.15;">{label}</div>
-            <div style="font-size: 1.55rem; font-weight: 800; color: #17351a; line-height: 1.05; margin-top: 0.2rem;">{display_value}</div>
+            <div style="font-size: 0.7rem; font-weight: 800; color: #334155; line-height: 1.1; text-transform: uppercase; letter-spacing: 0.04em;">{label}</div>
+            <div style="font-size: 1.18rem; font-weight: 850; color: #0f172a; line-height: 1.05; margin-top: 0.1rem; word-break: break-word;">{display_value}</div>
+            <div style="font-size: 0.68rem; font-weight: 700; color: rgba(15, 23, 42, 0.72); line-height: 1.1; min-height: 0.85rem;">{detail}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -289,7 +324,6 @@ def render_wordcloud_placeholder(source: str = "", disabled: bool = False, team_
     """Zeigt eine echte Wortwolke für das ausgewählte Team an."""
     selected_team = team_name if team_name and team_name != "Alle Teams" else ""
 
-    st.markdown("### Word Cloud aus Wikipedia")
     with st.container(border=True):
         if disabled:
             st.info("Datenquelle nicht aktiviert")
@@ -306,13 +340,15 @@ def render_wordcloud_placeholder(source: str = "", disabled: bool = False, team_
 def _build_comparison_chart_data(liga: str, saison: str, team_name: str) -> tuple[pd.DataFrame, dict | None]:
     kpis = load_leistung_kpis_from_db(liga, saison, team_name)
     if kpis is None:
-        return pd.DataFrame({"Metrik": ["Tore", "xG pro Spiel", "Gegentore"], "Wert": [0, None, 0]}), None
+        return pd.DataFrame({"Metrik": ["Tore", "xG-Index pro Spiel", "Gegentore"], "Wert": [0, None, 0]}), None
+
+    xg_index = round(kpis["xG"] * 10, 1) if kpis["xG"] is not None else None
 
     chart_data = pd.DataFrame({
-        "Metrik": ["Tore", "xG pro Spiel", "Gegentore"],
+        "Metrik": ["Tore", "xG-Index pro Spiel", "Gegentore"],
         "Wert": [
             kpis["Tore"],
-            kpis["xG"],
+            xg_index,
             kpis["Gegentore"],
         ],
     })
@@ -370,52 +406,99 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
     # Farben für die drei Metriken
     color_map = {
         "Tore": "#7ec97e",        # Helles Grün
-        "xG pro Spiel": "#4a7c59", # Mittleres Grün
+        "xG-Index pro Spiel": "#4a7c59", # Mittleres Grün
         "Gegentore": "#2d5a27"    # Dunkles Grün
     }
 
-    left_chart_data, left_kpis = _build_comparison_chart_data(liga, saison, team_name)
-    
+    selected_liga = liga
+    selected_saison = saison
+    compare_team_options = [
+        candidate
+        for candidate in get_available_teams(selected_liga, selected_saison)
+        if candidate != "Alle Teams"
+    ]
+    if not compare_team_options:
+        compare_team_options = list(dict.fromkeys([team_name, *all_teams])) or [team_name]
+
+    left_team_key = "compare_team_left"
+    left_team_source_key = "compare_team_left_source"
+    right_team_key = "compare_team_right"
+
+    if st.session_state.get(left_team_source_key) != team_name or left_team_key not in st.session_state:
+        st.session_state[left_team_key] = team_name
+        st.session_state[left_team_source_key] = team_name
+
+    left_current_team = st.session_state.get(left_team_key, team_name)
+    if left_current_team not in compare_team_options:
+        left_current_team = team_name if team_name in compare_team_options else compare_team_options[0]
+
+    right_current_team = st.session_state.get(right_team_key)
+    if right_current_team not in compare_team_options or right_current_team == left_current_team:
+        right_current_team = next((candidate for candidate in compare_team_options if candidate != left_current_team), left_current_team)
+
+    right_team_options = [candidate for candidate in compare_team_options if candidate != left_current_team]
+    if not right_team_options:
+        right_team_options = compare_team_options[:]
+
+    left_team_options = [candidate for candidate in compare_team_options if candidate != right_current_team]
+    if not left_team_options:
+        left_team_options = compare_team_options[:]
+
+    if left_current_team not in left_team_options:
+        left_current_team = team_name if team_name in left_team_options else left_team_options[0]
+
+    if right_current_team not in right_team_options:
+        right_current_team = next((candidate for candidate in right_team_options if candidate != left_current_team), right_team_options[0])
+
+    st.session_state[left_team_key] = left_current_team
+    st.session_state[right_team_key] = right_current_team
+
     with top_left:
         with st.container(border=True):
-            left_label = left_kpis["team"] if left_kpis else team_name
-            st.markdown(f"**Team:** {left_label}")
-
-    with top_right:
-        with st.container(border=True):
-            selected_liga = liga
-            selected_saison = saison
-
-            compare_team_options = [
-                candidate
-                for candidate in get_available_teams(selected_liga, selected_saison)
-                if candidate != "Alle Teams" and candidate != team_name
-            ]
-            if not compare_team_options:
-                compare_team_options = [candidate for candidate in all_teams if candidate != team_name] or [team_name]
-
             filter_label_col, filter_input_col = st.columns([1, 2], gap="small")
 
             with filter_label_col:
                 st.markdown("<div style='padding-top: 0.45rem; font-weight: 600;'>Team</div>", unsafe_allow_html=True)
             with filter_input_col:
-                selected_team = st.selectbox(
+                left_team = st.selectbox(
                     "Team",
-                    compare_team_options,
-                    key="compare_team",
+                    left_team_options,
+                    index=left_team_options.index(left_current_team),
+                    key=left_team_key,
+                    format_func=format_team_option_label,
+                    label_visibility="collapsed",
+                )
+
+            st.caption(f"Vergleich in gleicher Liga/Saison: {selected_liga} · {selected_saison}")
+    
+    with top_right:
+        with st.container(border=True):
+            filter_label_col, filter_input_col = st.columns([1, 2], gap="small")
+
+            with filter_label_col:
+                st.markdown("<div style='padding-top: 0.45rem; font-weight: 600;'>Team</div>", unsafe_allow_html=True)
+            with filter_input_col:
+                right_team = st.selectbox(
+                    "Team",
+                    right_team_options,
+                    index=right_team_options.index(right_current_team),
+                    key=right_team_key,
                     format_func=format_team_option_label,
                     label_visibility="collapsed",
                 )
 
             st.caption(f"Vergleich in gleicher Liga/Saison: {selected_liga} · {selected_saison}")
 
-    right_chart_data, right_kpis = _build_comparison_chart_data(selected_liga, selected_saison, selected_team)
-    left_label = left_kpis["team"] if left_kpis else team_name
-    right_label = right_kpis["team"] if right_kpis else selected_team
+    left_chart_data, left_kpis = _build_comparison_chart_data(selected_liga, selected_saison, left_team)
+    right_chart_data, right_kpis = _build_comparison_chart_data(selected_liga, selected_saison, right_team)
+    left_label = left_kpis["team"] if left_kpis else left_team
+    right_label = right_kpis["team"] if right_kpis else right_team
     left_max = left_chart_data["Wert"].fillna(0).max()
     right_max = right_chart_data["Wert"].fillna(0).max()
     shared_y_max = max(left_max, right_max, 1)
     shared_y_max = max(10, shared_y_max * 1.15)
+
+    st.caption("Hinweis: Der xG-Index pro Spiel ist zur besseren Vergleichbarkeit mit Tore und Gegentore mit Faktor 10 skaliert.")
 
     with bottom_left:
         fig = _build_comparison_figure(
@@ -427,6 +510,8 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
         st.plotly_chart(fig, width="stretch")
         if left_kpis and left_kpis["xG"] is None:
             st.caption("Für dieses Team liegen in StatsBomb aktuell keine xG-Vergleichsdaten vor.")
+        elif left_kpis and left_kpis.get("statsbomb_season_used") and left_kpis["statsbomb_season_used"] != selected_saison:
+            st.caption(f"xG basiert auf verfügbarer StatsBomb-Saison {left_kpis['statsbomb_season_used']}.")
 
     with bottom_right:
         fig = _build_comparison_figure(
@@ -438,6 +523,8 @@ def render_comparison_chart(team_name: str, liga: str, saison: str, all_teams: l
         st.plotly_chart(fig, width="stretch")
         if right_kpis and right_kpis["xG"] is None:
             st.caption("Für dieses Vergleichsteam liegen in StatsBomb aktuell keine xG-Vergleichsdaten vor.")
+        elif right_kpis and right_kpis.get("statsbomb_season_used") and right_kpis["statsbomb_season_used"] != selected_saison:
+            st.caption(f"xG basiert auf verfügbarer StatsBomb-Saison {right_kpis['statsbomb_season_used']}.")
 
 
 def render_statistics_tab() -> None:
@@ -459,8 +546,6 @@ def render_statistics_tab() -> None:
     liga_options = get_available_leagues()
 
     with st.container():
-        st.markdown("**Filter**")
-
         col_liga, col_saison, col_team = st.columns([1, 1, 1.2], gap="small")
 
         with col_liga:
@@ -497,7 +582,6 @@ def render_statistics_tab() -> None:
         unsafe_allow_html=True,
     )
     st.caption(f"Aktiver Filter: {liga} · {saison}")
-
     render_statistics(liga=liga, saison=saison, team=team)
 
 
@@ -523,7 +607,6 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         return
     
     # ===== BEREICH 1: KPIs & Wortwolke =====
-    st.markdown("### Übersicht")
 
     kpi_data = load_top_kpis_from_db(liga, saison, team)
     if kpi_data is None:
@@ -543,22 +626,61 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         "WordCloud": "Wikipedia"
     }
 
-    kpi_labels = [
-        ("Platz", kpi_data["Platz"] if kpi_data else "-", "."),
-        ("Punkte", kpi_data["Punkte"] if kpi_data else "-", "Pkt"),
-        ("Siege", kpi_data["Siege"] if kpi_data else "-", ""),
-        ("Unentschieden", kpi_data["Unentschieden"] if kpi_data else "-", ""),
-        ("Niederlagen", kpi_data["Niederlagen"] if kpi_data else "-", ""),
-        ("Tore", leistung_kpis["Tore"] if leistung_kpis else "-", ""),
-        ("Gegentore", leistung_kpis["Gegentore"] if leistung_kpis else "-", ""),
-        ("StatsBomb-Kennzahl", "-", ""),
+    kpi_colors = {
+        "Platz": "#6d28d9",
+        "Punkte": "#1d4ed8",
+        "StatsBomb-Feld": "#8b5cf6",
+        "Siege": "#15803d",
+        "Unentschieden": "#d97706",
+        "Niederlagen": "#be123c",
+        "Tore": "#a16207",
+        "Gegentore": "#7c3aed",
+        "StatsBomb-Kennzahl": "#4f46e5",
+    }
+
+    kpi_rows = [
+        [
+            {"label": "Platz", "value": kpi_data["Platz"] if kpi_data else "-", "unit": ".", "detail": "", "source": elements_sources["Platz"]},
+            {"label": "Punkte", "value": kpi_data["Punkte"] if kpi_data else "-", "unit": "", "detail": "", "source": elements_sources["Punkte"]},
+            {"label": "StatsBomb-Feld", "value": "", "unit": "", "detail": "später per SQL befüllen", "source": "Statsbomb"},
+        ],
+        [
+            {"label": "Siege", "value": kpi_data["Siege"] if kpi_data else "-", "unit": "", "detail": "", "source": elements_sources["Siege"]},
+            {"label": "Unentschieden", "value": kpi_data["Unentschieden"] if kpi_data else "-", "unit": "", "detail": "", "source": elements_sources["Unentschieden"]},
+            {"label": "Niederlagen", "value": kpi_data["Niederlagen"] if kpi_data else "-", "unit": "", "detail": "", "source": elements_sources["Niederlagen"]},
+        ],
+        [
+            {"label": "Tore", "value": leistung_kpis["Tore"] if leistung_kpis else "-", "unit": "", "detail": "", "source": elements_sources["Tore"]},
+            {"label": "Gegentore", "value": leistung_kpis["Gegentore"] if leistung_kpis else "-", "unit": "", "detail": "", "source": elements_sources["Gegentore"]},
+            {"label": "StatsBomb-Kennzahl", "value": "", "unit": "", "detail": "später per SQL befüllen", "source": elements_sources["StatsBomb-Kennzahl"]},
+        ],
     ]
-    kpi_cols = st.columns(len(kpi_labels), gap="small")
-    for index, (label, value, unit) in enumerate(kpi_labels):
-        with kpi_cols[index]:
-            source = elements_sources[label]
-            is_disabled = source not in sources_selected
-            render_kpi_card(label, value, unit, source=source, disabled=is_disabled)
+
+    kpi_col, wordcloud_col = st.columns([0.88, 1.52], gap="large")
+
+    with kpi_col:
+        for row_items in kpi_rows:
+            row_cols = st.columns(3, gap="small")
+            for index, card in enumerate(row_items):
+                with row_cols[index]:
+                    is_disabled = card["source"] not in sources_selected
+                    render_kpi_card(
+                        card["label"],
+                        card["value"],
+                        card["unit"],
+                        source=card["source"],
+                        disabled=is_disabled,
+                        accent_color=kpi_colors.get(card["label"], "#8b5cf6"),
+                        detail=card["detail"],
+                    )
+
+    with wordcloud_col:
+        is_disabled = elements_sources["WordCloud"] not in sources_selected
+        render_wordcloud_placeholder(
+            source=elements_sources["WordCloud"],
+            disabled=is_disabled,
+            team_name=team
+        )
 
     if kpi_data and team == "Alle Teams":
         st.caption(f"KPI-Werte zeigen aktuell: {kpi_data['team']} · {kpi_data['league']} · {kpi_data['season']}")
@@ -566,17 +688,9 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         st.caption(
             f"Datenstand OpenLigaDB: {kpi_data['Spiele']} Spiele · "
             f"{kpi_data['Siege']}S/{kpi_data['Unentschieden']}U/{kpi_data['Niederlagen']}N · "
-            f"Quellen: OpenLigaDB (Felder 1-7), StatsBomb (Feld 8)"
+            f"Quellen: OpenLigaDB (Felder 1-7), StatsBomb (Felder 8-9)"
         )
 
-    st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3; margin-top: 1rem; margin-bottom: 1rem;'>", unsafe_allow_html=True)
-
-    is_disabled = elements_sources["WordCloud"] not in sources_selected
-    render_wordcloud_placeholder(
-        source=elements_sources["WordCloud"],
-        disabled=is_disabled,
-        team_name=team
-    )
     st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3; margin-top: 1rem; margin-bottom: 1rem;'>", unsafe_allow_html=True)
     
     # ===== BEREICH 2: Team-Vergleich =====

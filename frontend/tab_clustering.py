@@ -20,12 +20,19 @@ CLUSTER_EMOJIS = ["🟢", "🔵", "🟠", "🟣", "🔴"]
 @st.cache_data(show_spinner=False)
 def lade_verfuegbare_ligen() -> list[str]:
     articles = load_articles()
-    return sorted(set(a["liga"] for a in articles if a.get("liga")))
+    ligen = sorted(set(a["liga"] for a in articles if a.get("liga")))
+    return ["Alle Ligen", *ligen]
 
 
 @st.cache_data(show_spinner=False)
 def lade_clustering_daten(k_wert: int, liga: str | None = None) -> tuple[pd.DataFrame, dict]:
     articles = load_articles()
+    if liga and liga != "Alle Ligen":
+        articles = [a for a in articles if a.get("liga") == liga]
+
+    if not articles:
+        raise ValueError("Keine Artikel für die ausgewählte Liga vorhanden.")
+
     df_raw, X, vectorizer = run_clustering(articles, n_clusters=k_wert)
     top_terms = get_top_terms_per_cluster(X, df_raw["cluster"].values, vectorizer)
 
@@ -84,6 +91,14 @@ def render_clustering_tab():
     col_filters, col_main = st.columns([1, 2.8])
 
     with col_filters:
+        st.markdown('<div class="filter-label">LIGA</div>', unsafe_allow_html=True)
+        liga = st.selectbox(
+            "Liga",
+            lade_verfuegbare_ligen(),
+            key="cluster_liga",
+            label_visibility="collapsed",
+        )
+
         st.markdown('<div class="filter-label">CLUSTER-ANZAHL</div>', unsafe_allow_html=True)
         k_wert = st.slider("Cluster-Anzahl (k)", min_value=2, max_value=5, value=3,
                            label_visibility="collapsed", key="cluster_k")
@@ -98,7 +113,7 @@ def render_clustering_tab():
 
         with st.spinner("Berechne Clustering..."):
             try:
-                df, insights = lade_clustering_daten(k_wert)
+                df, insights = lade_clustering_daten(k_wert, liga=liga)
             except Exception as e:
                 st.error(f"Fehler beim Laden der Daten: {e}")
                 return

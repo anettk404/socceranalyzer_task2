@@ -101,16 +101,16 @@ def zeige_wortwolke(haeufigkeiten: dict, titel: str = "") -> None:
 
     if WordCloud is not None:
         wc = WordCloud(
-            width=1100,
-            height=700,
+            width=780,
+            height=470,
             background_color="#f8fafc",
-            max_words=90,
+            max_words=60,
             colormap="viridis",
             random_state=42,
             prefer_horizontal=0.9,
         ).generate_from_frequencies(haeufigkeiten)
 
-        fig, ax = plt.subplots(figsize=(11.5, 6.2), dpi=140)
+        fig, ax = plt.subplots(figsize=(8.6, 4.7), dpi=140)
         fig.patch.set_facecolor("#f8fafc")
         ax.set_facecolor("#f8fafc")
         ax.imshow(wc, interpolation="bilinear")
@@ -136,7 +136,7 @@ def zeige_wortwolke(haeufigkeiten: dict, titel: str = "") -> None:
     st.caption(hint)
 
     max_weight = max(weight for _, weight in words)
-    fig, ax = plt.subplots(figsize=(11.5, 6.2), dpi=140)
+    fig, ax = plt.subplots(figsize=(8.6, 4.7), dpi=140)
     fig.patch.set_facecolor("#f8fafc")
     ax.set_facecolor("#f8fafc")
     ax.set_xlim(0, 1)
