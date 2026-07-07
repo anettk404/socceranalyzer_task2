@@ -574,7 +574,14 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
             f"Datenstand OpenLigaDB: {kpi_data['Spiele']} Spiele"
         )
 
-    st.markdown("<hr style='border: none; height: 2px; background-color: #d3d3d3; margin-top: 1rem; margin-bottom: 1rem;'>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style='height: 1rem;'></div>
+        <div style='height: 10px; border-radius: 999px; background: linear-gradient(90deg, rgba(148,163,184,0.12) 0%, rgba(148,163,184,0.32) 50%, rgba(148,163,184,0.12) 100%);'></div>
+        <div style='height: 0.8rem;'></div>
+        """,
+        unsafe_allow_html=True,
+    )
     
     # Bereich 2: direkter Teamvergleich mit zwei synchronen Diagrammen.
     st.markdown(f"### Team-Vergleich · {liga} · {saison}")
