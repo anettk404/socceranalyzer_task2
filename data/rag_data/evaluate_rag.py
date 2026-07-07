@@ -13,7 +13,6 @@ Aufruf: python data/rag_data/evaluate_rag.py
 
 import os
 import sys
-import json
 
 from dotenv import load_dotenv
 load_dotenv()

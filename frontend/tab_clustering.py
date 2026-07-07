@@ -1,6 +1,15 @@
-# -----------------------------------------------
-# tab_clustering.py
-# -----------------------------------------------
+"""
+tab_clustering.py – Clustering-Tab
+
+Autorin: Susanne Schmid
+
+------------------------------------------------------------------------------------------------
+Vereins-Clustering auf Basis von Wikipedia-Artikeln.
+TF-IDF Vektorisierung + KMeans Clustering + PCA-Reduktion für 2D-Visualisierung.
+LLM-basiertes Labeling der gefundenen Cluster (GPT-4o-mini).
+Filter: Liga-Auswahl (Dropdown) und Cluster-Anzahl k (Slider).
+------------------------------------------------------------------------------------------------
+"""
 
 import sys
 import os
@@ -10,7 +19,6 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from Clustering.clustering import load_articles, run_clustering, get_top_terms_per_cluster, label_clusters
-
 
 
 CLUSTER_COLORS = ["#2ecc71", "#3b82f6", "#f39c12", "#9b59b6", "#e74c3c"]
@@ -70,6 +78,10 @@ def render_clustering_tab():
             background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
             padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;
         }
+        .cluster-source {
+            background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe;
+            padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;
+        }
         .cluster-card {
             background: white; border: 1px solid #e5e7eb; border-radius: 10px;
             padding: 0.9rem 1rem; margin-bottom: 0.6rem;
@@ -108,6 +120,7 @@ def render_clustering_tab():
         <div class="cluster-header">
             <span class="cluster-title">Vereins-Clustering</span>
             <span class="cluster-subtitle">TF-IDF + KMeans + LLM-Labels</span>
+            <span class="cluster-source">Quelle: Wikipedia</span>
         </div>
         """, unsafe_allow_html=True)
 

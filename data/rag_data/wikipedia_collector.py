@@ -1,5 +1,7 @@
 """
 GenSoccerAnalyzer – Schritt 1: Wikipedia-Daten sammeln & strukturieren
+
+Autorin: Susanne Schmid
 =======================================================================
 Sammelt Wikipedia-Artikel für alle Teams der 5 europäischen Top-Ligen
 sowie die Liga-Artikel selbst (Bundesliga, Premier League, etc.).
