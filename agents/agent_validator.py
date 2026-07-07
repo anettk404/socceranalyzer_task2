@@ -26,35 +26,53 @@ def validator_agent(state: GraphState) -> GraphState:
 
     # Quellkontext aufbauen: SQL-Rohdaten haben Vorrang, danach RAG
     source_context = ""
+    source_label = ""
     sql_result = state.get("sql_result", "")
-    if sql_result and "SQL-Fehler" not in sql_result and sql_result != "[]":
-        # Rohdaten aus der DB auf 2000 Zeichen kürzen damit der Prompt nicht zu lang wird
+    sql_empty = sql_result in ("", "[]", None) or "SQL-Fehler" in (sql_result or "")
+
+    # Wenn SQL gelaufen ist aber nichts zurückgegeben hat → Daten fehlen, Confidence deckeln
+    if sql_result and sql_empty:
+        return {
+            **state,
+            "answer": state["answer"],
+            "confidence": 0.2,
+            "active_agent": "validator",
+        }
+
+    if sql_result and not sql_empty:
         truncated = sql_result[:2000] + ("..." if len(sql_result) > 2000 else "")
-        source_context = f"\n\nVerifizierte Rohdaten aus der Datenbank (Quelldaten der Antwort):\n{truncated}"
+        source_context = truncated
+        source_label = "Datenbank"
     elif _needs_fact_check(state["answer"]):
         retrieved = _retrieve(state["question"])
         if retrieved and "Keine relevanten" not in retrieved:
-            source_context = f"\n\nVerifizierte Fakten aus der Wissensdatenbank:\n{retrieved}"
+            source_context = retrieved
+            source_label = "Wissensdatenbank (Wikipedia)"
+
+    if source_context:
+        source_block = f"""
+VERIFIZIERTE QUELLDATEN ({source_label}):
+{source_context}
+
+AUFGABE: Vergleiche die Antwort des Agenten Zeichen für Zeichen mit den Quelldaten.
+- Stimmt jede Zahl, jedes Datum, jeder Name mit den Quelldaten überein?
+- Jede Abweichung von den Quelldaten → Score maximal 0.3 und korrigiere die Antwort.
+- Übereinstimmung → Score 0.8–1.0."""
+    else:
+        source_block = """
+KEINE QUELLDATEN VERFÜGBAR.
+- Enthält die Antwort konkrete Fakten (Zahlen, Daten, Namen)? → Score maximal 0.4.
+- Ist die Antwort inhaltslos oder am Thema vorbei? → Score 0.0–0.2.
+- Nur allgemein bekannte, eindeutige Fakten dürfen höher bewertet werden."""
 
     user_content = f"""Frage: {state['question']}
 
 Antwort des Agenten:
-{state['answer']}{source_context}
+{state['answer']}
+{source_block}
 
-Antworte ausschließlich mit einem JSON-Objekt in diesem Format:
-{{"answer": "<finale Antwort>", "confidence": <0.0–1.0>, "reason": "<kurze Begründung>"}}
-
-Regeln für den confidence-Score:
-- 0.9–1.0: Antwort ist klar, vollständig und alle Fakten sind dir sicher bekannt und korrekt.
-- 0.6–0.89: Antwort ist weitgehend korrekt, leicht unvollständig oder einzelne Details unsicher.
-- 0.3–0.59: Antwort enthält Fakten die du NICHT sicher bestätigen kannst, oder weicht von Quelldaten ab.
-- 0.0–0.29: Antwort widerspricht bekannten Fakten, ist inhaltsleer oder komplett am Thema vorbei.
-
-Wichtig:
-- Wenn Quelldaten vorhanden sind und die Antwort davon abweicht → korrigiere und senke den Score.
-- Wenn die Antwort konkrete Fakten enthält (Jahreszahlen, Titelanzahlen, Namen, Orte) die du
-  nicht mit Sicherheit bestätigen kannst → Score maximal 0.5, auch wenn es plausibel klingt.
-- Im Zweifel immer konservativ bewerten: lieber 0.4 als 0.9 bei unsicheren Fakten."""
+Antworte ausschließlich mit einem JSON-Objekt:
+{{"answer": "<korrigierte oder originale Antwort>", "confidence": <0.0–1.0>, "reason": "<kurze Begründung>"}}"""
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_content),

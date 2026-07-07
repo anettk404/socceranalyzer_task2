@@ -8,6 +8,7 @@ from .db import run_query, SCHEMA
 
 def combined_agent(state: GraphState) -> GraphState:
     """Generiert SQL auf allen Tabellen (openliga_* + statsbomb_*) und formuliert eine Antwort."""
+    history_block = f"Gesprächskontext:\n{state.get('chat_history', '')}\n\n" if state.get("chat_history") else ""
     sql_prompt = f"""Du hast Zugriff auf folgende SQLite-Tabellen:
 
 {SCHEMA}
@@ -16,7 +17,7 @@ Generiere ein SQL-SELECT-Query um die folgende Frage zu beantworten.
 Du darfst alle Tabellen nutzen und JOINs über Tabellengrenzen hinweg verwenden.
 Antworte ausschließlich mit dem SQL-Query, ohne Erklärungen oder Markdown.
 
-Frage: {state['question']}"""
+{history_block}Frage: {state['question']}"""
 
     sql_response = llm.invoke([HumanMessage(content=sql_prompt)])
     sql = sql_response.content.strip().removeprefix("```sql").removesuffix("```").strip()

@@ -23,6 +23,7 @@ llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 class GraphState(TypedDict):
     question: str
+    chat_history: str        # vorherige Gesprächsrunden als Kontext-String
     route: str
     route_reason: str
     sql: str

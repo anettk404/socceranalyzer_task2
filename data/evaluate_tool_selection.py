@@ -22,40 +22,33 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from agents.shared import llm, PROMPTS
 
 # ─────────────────────────────────────────────
-# TESTDATENSATZ — 25 Fragen mit erwarteter Agent-Zuordnung
+# TESTDATENSATZ — 18 Fragen basierend auf Prof-Vorgaben
 # Gültige Routen: "openligadb", "statsbomb", "combined", "rag"
 # ─────────────────────────────────────────────
 TEST_CASES = [
     # openligadb — aktuelle Tabellen, Ergebnisse, Spielpläne
-    {"question": "Wer steht aktuell auf Platz 1 der Bundesliga?",                         "expected": "openligadb"},
-    {"question": "Wie viele Punkte hat Bayern München in der aktuellen Saison?",           "expected": "openligadb"},
-    {"question": "Was war das Ergebnis des letzten Spiels von Borussia Dortmund?",         "expected": "openligadb"},
-    {"question": "Wer hat das letzte Bundesliga-Spiel gewonnen?",                          "expected": "openligadb"},
-    {"question": "Wie ist die aktuelle Torschützenliste der Bundesliga?",                  "expected": "openligadb"},
-    {"question": "Wann spielt Bayern München als nächstes?",                               "expected": "openligadb"},
-    {"question": "Welche Teams stehen aktuell in der Abstiegszone?",                       "expected": "openligadb"},
+    {"question": "Welche Spiele stehen am nächsten Bundesliga-Spieltag an?",               "expected": "openligadb"},
+    {"question": "Wie hat Bayern München in den letzten 5 Spielen abgeschnitten?",         "expected": "openligadb"},
+    {"question": "Welche Teams stehen aktuell in der Bundesliga-Tabelle oben?",            "expected": "openligadb"},
+    {"question": "Wann hat der 1. FC Köln sein letztes Heimspiel gewonnen?",               "expected": "openligadb"},
 
-    # statsbomb — xG, Pässe, Schüsse, Event-Daten
-    {"question": "Wie hoch ist der xG-Wert von Erling Haaland?",                          "expected": "statsbomb"},
-    {"question": "Wie viele Schüsse hat Lionel Messi in der Champions League abgegeben?",  "expected": "statsbomb"},
-    {"question": "Welcher Spieler hat die meisten Pässe in einem Match gespielt?",         "expected": "statsbomb"},
-    {"question": "Wie viele Tore wurden per Kopf in den StatsBomb-Daten erzielt?",         "expected": "statsbomb"},
-    {"question": "Zeig mir die Pass-Genauigkeit von Toni Kroos.",                          "expected": "statsbomb"},
-    {"question": "Welche Spieler haben den höchsten xG-Wert pro 90 Minuten?",             "expected": "statsbomb"},
-    {"question": "Wie viele Zweikämpfe hat ein Spieler im Durchschnitt gewonnen?",         "expected": "statsbomb"},
+    # statsbomb — xG, Schüsse, Spielphasen, Event-Daten
+    {"question": "Warum hat Bayern München dieses Spiel laut Daten gewonnen?",             "expected": "statsbomb"},
+    {"question": "Welche Mannschaft hatte im Spiel zwischen Dortmund und Bayern die besseren Torchancen?", "expected": "statsbomb"},
+    {"question": "Wie sah die Schussverteilung im letzten Spiel von Borussia Dortmund aus?", "expected": "statsbomb"},
+    {"question": "Welche Phase des Spiels war entscheidend für den Sieg von Bayern München?", "expected": "statsbomb"},
+    {"question": "Welche Teams überperformen ihre erwarteten Tore am stärksten?",           "expected": "statsbomb"},
+    {"question": "Welche Mannschaft hat die beste Defensive basierend auf zugelassenem xG?", "expected": "statsbomb"},
+    {"question": "Wie effizient ist Borussia Dortmund im Vergleich zur Liga im Abschluss?", "expected": "statsbomb"},
 
-    # combined — braucht beide Datenquellen
-    {"question": "Welche Teams aus der aktuellen Bundesliga kommen auch in den StatsBomb-Daten vor?", "expected": "combined"},
-    {"question": "Vergleiche die xG-Werte mit der aktuellen Tabellenposition der Teams.",  "expected": "combined"},
-    {"question": "Welche Bundesliga-Spieler haben laut StatsBomb die meisten Schüsse und wie stehen ihre Teams gerade?", "expected": "combined"},
+    # combined — braucht OpenLigaDB + StatsBomb
+    {"question": "Warum war Bayer Leverkusen in der Saison 2023/24 so dominant?",         "expected": "combined"},
 
     # rag — Vereinsgeschichte, Biografien, Wikipedia-Wissen
     {"question": "Wann wurde Bayern München gegründet?",                                   "expected": "rag"},
-   # {"question": "Was ist die Geschichte von Real Madrid?",                                "expected": "rag"},
     {"question": "Welche Titel hat Juventus FC in seiner Geschichte gewonnen?",            "expected": "rag"},
     {"question": "Wann wurde der FC Barcelona gegründet und von wem?",                     "expected": "rag"},
     {"question": "Wie viele Champions-League-Titel hat Real Madrid insgesamt gewonnen?",   "expected": "rag"},
-    {"question": "Wer war der erste Trainer von Borussia Dortmund?",                       "expected": "rag"},
     {"question": "Was ist das Estadio Santiago Bernabéu?",                                 "expected": "rag"},
     {"question": "Welche Spieler gelten als die größten Legenden des FC Barcelona?",       "expected": "rag"},
 ]
