@@ -83,6 +83,13 @@ def format_team_option_label(team_name: str) -> str:
     return team_name if has_wordcloud_data(team_name) else f"{team_name} (ohne Wikipedia)"
 
 
+def format_liga_option_label(liga_name: str) -> str:
+    """Formatiert Liga-Bezeichnungen für die UI-Anzeige."""
+    if liga_name == "1. Bundesliga":
+        return "Bundesliga"
+    return liga_name
+
+
 # =====================================================
 # 4) KPI-Loader: OpenLigaDB + StatsBomb Kombination
 # =====================================================
@@ -142,7 +149,10 @@ def render_kpi_card(
 @st.cache_data(show_spinner=False)
 def load_team_sentiment(team_name: str) -> dict | None:
     """Lädt teambezogene Sentiment-Werte aus der Wikipedia-JSON über den Service."""
-    return get_team_sentiment_for_stats_tab(team_name)
+    try:
+        return get_team_sentiment_for_stats_tab(team_name)
+    except Exception:
+        return None
 
 
 def _sentiment_color(sentiment_label: str) -> str:
@@ -166,7 +176,12 @@ def render_sentiment_section(team_name: str, source_enabled: bool = True):
         st.info("Bitte ein konkretes Team auswählen, um den Sentiment-Wert anzuzeigen.")
         return
 
-    team_sentiment = load_team_sentiment(team_name)
+    try:
+        team_sentiment = load_team_sentiment(team_name)
+    except Exception:
+        st.info("Sentiment-Daten sind aktuell nicht verfügbar.")
+        return
+
     if team_sentiment is None:
         st.info("Für dieses Team sind aktuell keine Sentiment-Daten verfügbar.")
         return
@@ -425,6 +440,7 @@ def render_statistics_tab() -> None:
                 "Liga",
                 liga_options,
                 key="stats_liga",
+                format_func=format_liga_option_label,
             )
 
         saison_options = get_available_seasons(liga)
@@ -454,7 +470,7 @@ def render_statistics_tab() -> None:
         f'<div class="stats-focus-team">Verein im Fokus: {team_heading}</div>',
         unsafe_allow_html=True,
     )
-    st.caption(f"Aktiver Filter: {liga} · {saison}")
+    st.caption(f"Aktiver Filter: {format_liga_option_label(liga)} · {saison}")
     render_statistics(liga=liga, saison=saison, team=team)
 
 
@@ -584,5 +600,5 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
     )
     
     # Bereich 2: direkter Teamvergleich mit zwei synchronen Diagrammen.
-    st.markdown(f"### Team-Vergleich · {liga} · {saison}")
+    st.markdown(f"### Team-Vergleich · {format_liga_option_label(liga)} · {saison}")
     render_comparison_chart(team, liga, saison, ["Bayern", "Dortmund", "Leverkusen", "Mainz", "Leipzig"])
