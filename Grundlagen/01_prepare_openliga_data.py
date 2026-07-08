@@ -5,6 +5,9 @@ Lädt mehrere Bundesliga-Saisons von OpenLigaDB, bereinigt die Daten,
 berechnet die finale Platzierung und speichert das Ergebnis als CSV
 für den Statistik-Tab in Streamlit.
 
+Diese Datei wurde aus dem Notebook "01_prepare_openliga_data.ipynb" entwickelt, um das Programmieren mit .py-Dateien zu üben.
+Sie hat keine direkte Funktion im Streamlit-Frontend und ist nur als Übung zu verstehen.
+
 Ausführen:
     uv run python 01_prepare_openliga_data.py
 """
