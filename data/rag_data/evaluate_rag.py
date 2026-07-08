@@ -49,6 +49,7 @@ TEST_CASES = [
         "question": "Wann wurde der FC Barcelona gegründet?",
         "ground_truth": "Der FC Barcelona wurde am 29. November 1899 von Joan Gamper gegründet.",
     },
+    
 ]
 
 
@@ -57,11 +58,13 @@ TEST_CASES = [
 # ─────────────────────────────────────────────
 def _score(prompt: str) -> float:
     """Fragt das LLM nach einem Score zwischen 0.0 und 1.0."""
+    import re
     response = llm.invoke([HumanMessage(content=prompt)])
-    try:
-        return float(response.content.strip())
-    except ValueError:
-        return 0.0
+    text = response.content.strip()
+    match = re.search(r"\b(0(\.\d+)?|1(\.0+)?)\b", text)
+    if match:
+        return float(match.group())
+    return 0.0
 
 
 def faithfulness(question: str, answer: str, contexts: list[str]) -> float:

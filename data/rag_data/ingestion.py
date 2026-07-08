@@ -337,7 +337,6 @@ def embed_and_upload(chunks: list[dict], pinecone_index, embed_model: OpenAIEmbe
 
 # ─────────────────────────────────────────────
 # 8. SCHNELLTEST: RETRIEVAL PRÜFEN
-#    inkl. der "Bayern-Gründungsjahr"-Frage von damals
 # ─────────────────────────────────────────────
 def test_retrieval(pinecone_index, embed_model: OpenAIEmbedding, top_k: int = 3):
     print("\n🔍 Schnelltest: Retrieval...")
@@ -346,8 +345,7 @@ def test_retrieval(pinecone_index, embed_model: OpenAIEmbedding, top_k: int = 3)
         "Wann wurde Bayern München gegründet?",
         "Wer ist der aktuelle Trainer von Bayern München?",
         "Welche Erfolge hat Borussia Dortmund?",
-        "Wer spielt im Kader von RB Leipzig?",
-        "Wie funktioniert der Abstieg in der Bundesliga?",
+        "Wer spielt im Kader von RB Leipzig?"
     ]
 
     for query in test_queries:
