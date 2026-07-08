@@ -446,7 +446,7 @@ def collect_all_articles(
                 soup = fetch_html(team)
 
                 if soup is None:
-                    print(f"  ❌ HTML nach allen Versuchen fehlgeschlagen – Team wird beim nächsten Start erneut versucht.")
+                    print(f"HTML nach allen Versuchen fehlgeschlagen – Team wird beim nächsten Start erneut versucht.")
                     pbar.update(1)
                     continue  # nicht speichern!
 
