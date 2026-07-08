@@ -42,7 +42,7 @@ TEST_CASES = [
     {"question": "Wie effizient ist Borussia Dortmund im Vergleich zur Liga im Abschluss?", "expected": "statsbomb"},
 
     # combined — braucht OpenLigaDB + StatsBomb
-    {"question": "Warum war Bayer Leverkusen in der Saison 2023/24 so dominant?",         "expected": "combined"},
+    {"question": "Warum war Bayer Leverkusen 2023/24 so dominant im Vergleich zu Tabellenstand, Punkten und xG-Werten?","expected": "combined"},
 
     # rag — Vereinsgeschichte, Biografien, Wikipedia-Wissen
     {"question": "Wann wurde Bayern München gegründet?",                                   "expected": "rag"},
