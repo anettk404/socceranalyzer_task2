@@ -194,7 +194,7 @@ def load_statsbomb_kpis_from_db(team_name: str, saison_label: str, liga: str, db
                 COUNT(*) AS event_count,
                 COUNT(DISTINCT match_id) AS spiele,
                 COALESCE(SUM(CASE WHEN type = 'Shot' AND shot_outcome = 'Goal' THEN 1 ELSE 0 END), 0) AS tore,
-                COALESCE(SUM(CASE WHEN type = 'Shot' THEN shot_xg ELSE 0 END), 0) AS xg_summe,
+                COALESCE(SUM(CASE WHEN type = 'Shot' THEN shot_xg ELSE 0 END), 0) AS xg_summe
             FROM filtered_events
         """
 
