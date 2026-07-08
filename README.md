@@ -5,7 +5,9 @@ GenSoccerAnalyzer ist eine KI-gestützte Fußball-Analyse-App, die natürlichspr
 **Autorin:** Annette Kufner, Susanne Schmid, Selma Elezovic
 
 ---
-
+## Link Screencast
+- https://drive.google.com/file/d/1xwJOukmdiz4Zsb2YPNJJG7_ikcEbO3t9/view?usp=sharing
+---
 ## Datenquellen
 
 | Quelle | Inhalt | Agent |

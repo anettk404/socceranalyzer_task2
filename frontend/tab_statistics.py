@@ -526,6 +526,8 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         "Niederlagen": "OpenligaDB",
         "Tore": "OpenligaDB",
         "Gegentore": "OpenligaDB",
+        "xG": "Statsbomb",
+        "Chancenverwertung": "Statsbomb",
         "StatsBomb-Kennzahl": "Statsbomb",
         "WordCloud": "Wikipedia"
     }
@@ -533,13 +535,13 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
     kpi_colors = {
         "Platz": "#6d28d9",
         "Punkte": "#1d4ed8",
-        "StatsBomb-Feld": "#8b5cf6",
+        "xG": "#8b5cf6",
         "Siege": "#15803d",
         "Unentschieden": "#d97706",
         "Niederlagen": "#be123c",
         "Tore": "#a16207",
         "Gegentore": "#7c3aed",
-        "StatsBomb-Kennzahl": "#4f46e5",
+        "Chancenverwertung": "#4f46e5",
     }
 
     # Reihenfolge und Gruppierung der KPI-Karten im 3x3-Raster.
@@ -547,7 +549,7 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         [
             {"label": "Platz", "value": kpi_data["Platz"] if kpi_data else "-", "unit": ".", "detail": "", "source": elements_sources["Platz"]},
             {"label": "Punkte", "value": kpi_data["Punkte"] if kpi_data else "-", "unit": "", "detail": "", "source": elements_sources["Punkte"]},
-            {"label": "StatsBomb-Feld", "value": "", "unit": "", "detail": "später per SQL befüllen", "source": "Statsbomb"},
+            {"label": "xG", "value": leistung_kpis["xG gesamt"] if leistung_kpis and leistung_kpis["xG gesamt"] is not None else "-", "unit": "", "detail": "erwartete Tore gesamt", "source": elements_sources["xG"]},
         ],
         [
             {"label": "Siege", "value": kpi_data["Siege"] if kpi_data else "-", "unit": "", "detail": "", "source": elements_sources["Siege"]},
@@ -557,7 +559,7 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         [
             {"label": "Tore", "value": leistung_kpis["Tore"] if leistung_kpis else "-", "unit": "", "detail": "", "source": elements_sources["Tore"]},
             {"label": "Gegentore", "value": leistung_kpis["Gegentore"] if leistung_kpis else "-", "unit": "", "detail": "", "source": elements_sources["Gegentore"]},
-            {"label": "StatsBomb-Kennzahl", "value": "", "unit": "", "detail": "später per SQL befüllen", "source": elements_sources["StatsBomb-Kennzahl"]},
+            {"label": "Chancenverwertung", "value": leistung_kpis["Chancenverwertung"] if leistung_kpis and leistung_kpis["Chancenverwertung"] is not None else "-", "unit": "", "detail": "Tore minus xG", "source": elements_sources["Chancenverwertung"]},
         ],
     ]
 

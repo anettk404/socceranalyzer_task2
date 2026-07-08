@@ -52,7 +52,9 @@ def load_leistung_kpis_for_stats_tab(liga: str, saison: str, team_name: str) -> 
         "season": table_kpis["season"],
         "Tore": table_kpis["Tore"],
         "Gegentore": table_kpis["Gegentore"],
+        "xG gesamt": statsbomb_kpis.get("xG") if statsbomb_kpis else None,
         "xG": xg_per_game,
+        "Chancenverwertung": statsbomb_kpis.get("Chancenverwertung") if statsbomb_kpis else None,
         "statsbomb_season_used": statsbomb_season_used if statsbomb_kpis else None,
     }
 
