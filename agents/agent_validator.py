@@ -4,85 +4,157 @@
 # verglichen, bei faktischen Aussagen wird zusätzlich ein RAG-Fact-Check durchgeführt.
 
 import json
+import re
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from .shared import llm, PROMPTS, GraphState
 from .agent_rag import _retrieve
 
+# Bekannte Fußball-Entitäten — wenn keine davon in Frage/Antwort vorkommt,
+# behandeln wir die Anfrage als out-of-domain und deckeln die Confidence.
+_SOCCER_ENTITIES = [
+    "bundesliga", "champions league", "fc ", " fc", "borussia", "bayern", "dortmund",
+    "schalke", "leverkusen", "gladbach", "köln", "frankfurt", "stuttgart", "freiburg",
+    "wolfsburg", "bochum", "augsburg", "berlin", "hoffenheim", "mainz", "bremen",
+    "juventus", "real madrid", "barcelona", "arsenal", "chelsea", "liverpool",
+    "manchester", "milan", "inter", "atletico", "paris", "juventus",
+    "bundesliga", "serie a", "la liga", "premier league", "ligue 1",
+    "spieler", "trainer", "tore", "xg", "schüsse", "pässe", "pressing",
+    "meisterschaft", "pokal", "titel", "abstieg", "aufstieg", "tabelle",
+    "stadion", "verein", "fußball", "fussball", "soccer", "weltmeister",
+    "dfb", "fifa", "uefa", "cl-", "cl ", "em", "wm",
+]
+
+# Wichtige faktische Schlüsselbegriffe die auf prüfbare Aussagen hinweisen
+_FACT_INDICATORS = [
+    "gegründet", "titel", "gewonnen", "geboren", "gestorben", "stadion",
+    "champions", "meisterschaft", "rekord", "trainer", "gründer", "geschichte",
+    "wurde", "hat", "ist", "sind", "war", "waren",
+]
+
+# Zahlen-Muster: Jahreszahlen, Titelanzahlen, Statistiken
+_NUMBER_PATTERN = re.compile(r'\b\d{4}\b|\b\d{1,3}\b')
+
 
 def _needs_fact_check(answer: str) -> bool:
-    """Heuristik: enthält die Antwort faktische Aussagen die überprüft werden sollten?
-
-    Generische Verben wie 'ist', 'war', 'hat' sind bewusst enthalten — fast jede
-    inhaltliche Antwort enthält sie, sodass der RAG-Fact-Check möglichst breit greift.
-    Nur bei SQL-Daten (sql_result vorhanden) wird diese Funktion gar nicht aufgerufen.
-    """
-    fact_indicators = [
-        "gegründet", "titel", "gewonnen", "geboren", "gestorben", "stadion",
-        "champions", "meisterschaft", "rekord", "trainer", "gründer", "geschichte",
-        "wurde", "hat", "ist", "sind", "war", "waren",
-    ]
+    """Heuristik: enthält die Antwort faktische Aussagen die überprüft werden sollten?"""
     answer_lower = answer.lower()
-    return any(word in answer_lower for word in fact_indicators)
+    return any(word in answer_lower for word in _FACT_INDICATORS)
+
+
+def _is_out_of_domain(question: str, answer: str) -> bool:
+    """Prüft ob Frage/Antwort keinen Fußball-Bezug haben."""
+    combined = (question + " " + answer).lower()
+    return not any(ent in combined for ent in _SOCCER_ENTITIES)
+
+
+def _extract_key_terms(text: str) -> list[str]:
+    """Extrahiert Schlüsselbegriffe aus Frage/Antwort für den Quellenvergleich.
+
+    Gibt Wörter mit >= 4 Zeichen zurück (filtert Füllwörter heraus),
+    plus alle Zahlenfolgen (Jahreszahlen, Titelanzahlen, Statistikwerte).
+    """
+    words = re.findall(r'\b\w+\b', text.lower())
+    meaningful = [w for w in words if len(w) >= 4]
+    numbers = _NUMBER_PATTERN.findall(text)
+    return list(set(meaningful + numbers))
+
+
+def _entities_in_context(question: str, answer: str, context: str) -> bool:
+    """Prüft ob zentrale Entitäten aus Frage/Antwort im Quellenkontext vorkommen.
+
+    Gibt True zurück wenn mindestens ein Schlüsselbegriff aus Frage oder Antwort
+    im Kontext gefunden wird — verhindert zu strenge Decklung bei breiten Fragen.
+    """
+    context_lower = context.lower()
+    terms = _extract_key_terms(question + " " + answer)
+    # Mindestens 2 Begriffe müssen im Kontext vorkommen
+    hits = sum(1 for t in terms if t in context_lower)
+    return hits >= 2
+
+
+def _contains_numbers(text: str) -> bool:
+    """True wenn die Antwort konkrete Zahlen oder Jahreszahlen enthält."""
+    return bool(_NUMBER_PATTERN.search(text))
+
+
+def _numbers_in_context(answer: str, context: str) -> bool:
+    """Prüft ob die Zahlen aus der Antwort auch im Quellenkontext vorkommen."""
+    answer_numbers = _NUMBER_PATTERN.findall(answer)
+    if not answer_numbers:
+        return True
+    context_lower = context.lower()
+    return any(num in context_lower for num in answer_numbers)
 
 
 def validator_agent(state: GraphState) -> GraphState:
     """Prüft die Antwort auf Halluzinationen und gibt einen Confidence-Score zurück.
 
-    Bei faktischen Aussagen wird zusätzlich ein RAG-Fact-Check gegen Pinecone durchgeführt.
+    Reihenfolge:
+    1. SQL-Ergebnis leer/Fehler → confidence 0.2
+    2. SQL-Daten vorhanden → LLM-Vergleich gegen Rohdaten
+    3. Faktische Antwort → RAG-Retrieval mit Frage+Antwort als Query (top_k=10)
+    4. Nachträgliche Confidence-Caps anhand Entitäts- und Zahlenprüfung
+    5. Out-of-domain → confidence <= 0.3
     """
     system_prompt = PROMPTS["validator"]["system"]
+    answer = state["answer"]
+    question = state["question"]
 
-    # Quellkontext aufbauen: SQL-Rohdaten haben Vorrang, danach RAG
-    source_context = ""
-    source_label = ""
+    # ── 1. SQL-Kurzschluss ──────────────────────────────────────────────────
     sql_result = state.get("sql_result", "")
     sql_empty = sql_result in ("", "[]", None) or "SQL-Fehler" in (sql_result or "")
 
-    # Wenn SQL gelaufen ist aber nichts zurückgegeben hat → Daten fehlen, Confidence deckeln
     if sql_result and sql_empty:
-        return {
-            **state,
-            "answer": state["answer"],
-            "confidence": 0.2,
-            "active_agent": "validator",
-        }
+        return {**state, "answer": answer, "confidence": 0.2, "active_agent": "validator"}
+
+    # ── 2. Quellenkontext aufbauen ───────────────────────────────────────────
+    source_context = ""
+    source_label = ""
 
     if sql_result and not sql_empty:
         truncated = sql_result[:2000] + ("..." if len(sql_result) > 2000 else "")
         source_context = truncated
         source_label = "Datenbank"
-    elif _needs_fact_check(state["answer"]):
-        retrieved = _retrieve(state["question"])
+    elif _needs_fact_check(answer):
+        # Frage + Antwort als Query für bessere Chunk-Treffsicherheit
+        retrieval_query = f"{question} {answer}"
+        retrieved = _retrieve(retrieval_query, top_k=10)
         if retrieved and "Keine relevanten" not in retrieved:
             source_context = retrieved
             source_label = "Wissensdatenbank (Wikipedia)"
 
+    # ── 3. LLM-Prompt aufbauen ───────────────────────────────────────────────
     if source_context:
         source_block = f"""
 VERIFIZIERTE QUELLDATEN ({source_label}):
 {source_context}
 
-AUFGABE: Vergleiche die Antwort des Agenten Zeichen für Zeichen mit den Quelldaten.
-- Stimmt jede Zahl, jedes Datum, jeder Name mit den Quelldaten überein?
-- Jede Abweichung von den Quelldaten → Score maximal 0.3 und korrigiere die Antwort.
-- Übereinstimmung → Score 0.8–1.0."""
+AUFGABE: Prüfe die Antwort anhand der Quelldaten.
+- Vergleiche alle prüfbaren Fakten: Zahlen, Daten, Vereinsnamen, Spielernamen,
+  Stadien, Trainer, Titel, Tabellenplätze, xG-Werte.
+- Wenn der konkrete Fakt oder die zentrale Entität NICHT in den Quelldaten vorkommt:
+  gilt der Fakt als NICHT VERIFIZIERBAR → Score maximal 0.4.
+- Wenn Zahlen/Daten in der Antwort aber nicht in den Quellen vorkommen → Score maximal 0.3.
+- Stimmen die zentralen Fakten überein → Score 0.8–1.0.
+- Verwende AUSSCHLIESSLICH die Quelldaten — kein eigenes Modellwissen."""
     else:
         source_block = """
 KEINE QUELLDATEN VERFÜGBAR.
 - Enthält die Antwort konkrete Fakten (Zahlen, Daten, Namen)? → Score maximal 0.4.
 - Ist die Antwort inhaltslos oder am Thema vorbei? → Score 0.0–0.2.
-- Nur allgemein bekannte, eindeutige Fakten dürfen höher bewertet werden."""
+- Verwende kein eigenes Modellwissen zur Bewertung."""
 
-    user_content = f"""Frage: {state['question']}
+    user_content = f"""Frage: {question}
 
 Antwort des Agenten:
-{state['answer']}
+{answer}
 {source_block}
 
 Antworte ausschließlich mit einem JSON-Objekt:
 {{"answer": "<korrigierte oder originale Antwort>", "confidence": <0.0–1.0>, "reason": "<kurze Begründung>"}}"""
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_content),
@@ -92,18 +164,40 @@ Antworte ausschließlich mit einem JSON-Objekt:
 
     try:
         parsed = json.loads(raw)
-        answer = parsed.get("answer", state["answer"])
+        validated_answer = parsed.get("answer", answer)
         confidence = float(parsed.get("confidence", 0.5))
         confidence = max(0.0, min(1.0, confidence))
     except (json.JSONDecodeError, ValueError, KeyError):
-        answer = state["answer"]
+        validated_answer = answer
         confidence = 0.5
 
-    return {**state, "answer": answer, "confidence": confidence, "active_agent": "validator"}
+    # ── 4. Nachträgliche Confidence-Caps ────────────────────────────────────
+
+    # Out-of-domain: kein Fußball-Bezug erkennbar
+    if _is_out_of_domain(question, answer):
+        confidence = min(confidence, 0.3)
+
+    # Inhaltsleere oder Off-topic-Antwort
+    empty_indicators = ["keine daten", "leider", "kann ich nicht", "nicht gefunden", "keine informationen"]
+    if any(ind in answer.lower() for ind in empty_indicators):
+        confidence = min(confidence, 0.2)
+
+    # Keine Quelle vorhanden + faktische Aussagen → maximal 0.4
+    if not source_context and _needs_fact_check(answer):
+        confidence = min(confidence, 0.4)
+
+    # Quelle vorhanden, aber zentrale Entitäten fehlen im Kontext → maximal 0.4
+    if source_context and not _entities_in_context(question, answer, source_context):
+        confidence = min(confidence, 0.4)
+
+    # Zahlen in Antwort aber nicht in Quelle → maximal 0.3
+    if source_context and _contains_numbers(answer) and not _numbers_in_context(answer, source_context):
+        confidence = min(confidence, 0.3)
+
+    return {**state, "answer": validated_answer, "confidence": confidence, "active_agent": "validator"}
 
 
 if __name__ == "__main__":
-    # Testfälle: (frage, antwort, erwartetes Verhalten)
     test_cases = [
         {
             "label": "Korrekte Antwort",
@@ -128,7 +222,7 @@ if __name__ == "__main__":
     ]
 
     empty_base = {
-        "route": "", "route_reason": "", "sql": "",
+        "route": "", "route_reason": "", "sql": "", "sql_result": "",
         "sub_answers": [], "steps": [], "active_agent": "", "confidence": 0.0,
     }
 

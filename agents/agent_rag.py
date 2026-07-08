@@ -39,15 +39,19 @@ def _get_embed_model() -> OpenAIEmbedding:
     return _embed_model
 
 
-def _retrieve(question: str) -> str:
-    """Wandelt die Frage in einen Embedding-Vektor um und sucht die Top-K ähnlichsten
-    Wikipedia-Chunks in Pinecone. Gibt die Texte mit Team/Liga-Metadaten zurück."""
+def _retrieve(question: str, top_k: int = TOP_K) -> str:
+    """Wandelt die Frage in einen Embedding-Vektor um und sucht die ähnlichsten
+    Wikipedia-Chunks in Pinecone. Gibt die Texte mit Team/Liga-Metadaten zurück.
+
+    top_k kann überschrieben werden — der Validator nutzt 10 statt 5 für bessere
+    Faktentreffer bei der Verifikation.
+    """
     embed_model = _get_embed_model()
     index = _get_pinecone_index()
 
     # Frage als Vektor kodieren und semantisch ähnliche Chunks suchen
     query_vector = embed_model.get_query_embedding(question)
-    results = index.query(vector=query_vector, top_k=TOP_K, include_metadata=True)
+    results = index.query(vector=query_vector, top_k=top_k, include_metadata=True)
 
     if not results["matches"]:
         return "Keine relevanten Dokumente gefunden."
