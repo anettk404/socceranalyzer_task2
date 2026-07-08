@@ -121,6 +121,7 @@ uv run python data/evaluate_end_to_end.py
 #  4. RAG Evaluation
 uv run python data/rag_data/evaluate_rag.py
 ```
+## Multi-Agenten System
 
 | Metrik | Beschreibung |
 |---|---|
@@ -132,6 +133,14 @@ uv run python data/rag_data/evaluate_rag.py
 | **Strict Pass Rate** | Route + Inhalt + Confidence ≥ 0.4 |
 
 ---
+
+### RAG-Agent
+
+| Metrik | Beschreibung |
+|---|---|
+| **Faithfulness** | Ist die Antwort treu gegenüber den abgerufenen Chunks — keine erfundenen Fakten? |
+| **Answer Relevancy** | Beantwortet die Antwort tatsächlich die gestellte Frage? |
+| **Context Precision** | Sind die abgerufenen Chunks relevant für die Frage? |
 
 ## Visualisierungen
 
