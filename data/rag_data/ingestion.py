@@ -72,7 +72,7 @@ def setup_pinecone():
     existing = [idx.name for idx in pc.list_indexes()]
 
     if INDEX_NAME not in existing:
-        print(f"🆕 Erstelle Pinecone Index '{INDEX_NAME}'...")
+        print(f"Erstelle Pinecone Index '{INDEX_NAME}'...")
         pc.create_index(
             name=INDEX_NAME,
             dimension=EMBEDDING_DIM,
@@ -221,14 +221,14 @@ def build_structured_chunks(article: dict) -> list[dict]:
 # ─────────────────────────────────────────────
 def load_articles() -> tuple[list[dict], list[dict]]:
     """Lädt Vereins- und Liga-Artikel getrennt, da Liga-Artikel kein 'team' haben."""
-    print(f"\n📂 Lade Vereinsartikel aus '{TEAMS_FILE}'...")
+    print(f"\nLade Vereinsartikel aus '{TEAMS_FILE}'...")
     with open(TEAMS_FILE, "r", encoding="utf-8") as f:
         teams = json.load(f)
     print(f"{len(teams)} Vereinsartikel geladen.")
 
     leagues = []
     if Path(LEAGUES_FILE).exists():
-        print(f"📂 Lade Liga-Artikel aus '{LEAGUES_FILE}'...")
+        print(f"Lade Liga-Artikel aus '{LEAGUES_FILE}'...")
         with open(LEAGUES_FILE, "r", encoding="utf-8") as f:
             leagues = json.load(f)
         print(f"{len(leagues)} Liga-Artikel geladen.")
