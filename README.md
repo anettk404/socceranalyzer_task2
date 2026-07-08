@@ -117,6 +117,9 @@ uv run python data/evaluate_validator.py
 
 # 3. End-to-End Pipeline (dauert ~5–10 Minuten)
 uv run python data/evaluate_end_to_end.py
+
+#  4. RAG Evaluation
+uv run python data/rag_data/evaluate_rag.py
 ```
 
 | Metrik | Beschreibung |
