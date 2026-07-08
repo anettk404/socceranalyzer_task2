@@ -1,10 +1,15 @@
 """
 Titel: Wikipedia Sentiment-Analyse Service
-Beschreibung: Dieses Modul lädt historische Wikipedia-Artikel von Fußballvereinen,
-              zerlegt die Texte auf Satzebene und berechnet mithilfe des VADER-
-              SentimentIntensityAnalyzers eine durchschnittliche Tonalität (Score) pro Verein.
-              Die Ergebnisse werden farbcodiert in einem Pandas DataFrame ausgegeben.
+
+Beschreibung: Dieses Modul lädt Wikipedia-Artikel von Fußballvereinen, berechnet
+              Satz-für-Satz-Sentiment mit VADER und stellt die Ergebnisse als
+              teambezogene Kennzahlen für das Frontend bereit.
+Wichtige Inhalte: Wikipedia-Import, Team-Normalisierung, Sentiment-Berechnung,
+                  DataFrame-Aufbereitung, Team-Lookup.
+                  
 Autorin: Annette Kufner
+
+Hinweis: Dieses Skript wurde mithilfe von Gemini, Claude und Codex erstellt.
 """
 
 import json
@@ -13,6 +18,7 @@ import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 import unicodedata
 import re
+from importlib import import_module
 
 
 _SENTIMENT_TEAM_ALIASES = {
@@ -28,6 +34,8 @@ _SENTIMENT_TEAM_ALIASES = {
 }
 
 
+# Teamnamen werden auf eine einheitliche Schreibweise gebracht, damit Wikipedia-
+# Titel, UI-Auswahl und Service-Resultate zuverlässig zusammenpassen.
 def _normalize_team_name_for_sentiment(team_name: str) -> str:
     normalized = unicodedata.normalize("NFKD", team_name or "")
     normalized = normalized.encode("ascii", "ignore").decode("ascii").lower()
@@ -46,6 +54,30 @@ def sentiment_label_from_score(avg_score: float) -> str:
     return "🟡 Etwas durchwachsen"
 
 
+# Fallback-Logik für den Analyzer, damit Streamlit Cloud bei fehlender NLTK-
+# Ressource trotzdem Sentiment-Werte berechnen kann.
+def _build_sentiment_analyzer():
+    """Erzeugt einen Sentiment-Analyzer ohne harte Abhängigkeit von NLTK-Ressourcen."""
+    try:
+        return SentimentIntensityAnalyzer()
+    except LookupError:
+        try:
+            nltk.download("vader_lexicon", quiet=True)
+            return SentimentIntensityAnalyzer()
+        except Exception:
+            try:
+                vader_module = import_module("vaderSentiment.vaderSentiment")
+                return vader_module.SentimentIntensityAnalyzer()
+            except Exception:
+                return None
+    except Exception:
+        try:
+            vader_module = import_module("vaderSentiment.vaderSentiment")
+            return vader_module.SentimentIntensityAnalyzer()
+        except Exception:
+            return None
+
+
 def get_wikipedia_sentiment_dataframe(file_path="data/wikipedia_articles.json"):
     """
     Liest die Wikipedia-Artikel ein, analysiert die Stimmung (Sentiment) Satz für Satz
@@ -57,6 +89,7 @@ def get_wikipedia_sentiment_dataframe(file_path="data/wikipedia_articles.json"):
     Rückgabewert:
         pd.DataFrame: Bereinigte und sortierte Tabelle für das Streamlit-Frontend.
     """
+    # Wikipedia-Artikel einlesen und anschließend Satzweise bewerten.
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             articles = json.load(f)
@@ -64,18 +97,12 @@ def get_wikipedia_sentiment_dataframe(file_path="data/wikipedia_articles.json"):
         # Fallback für geänderte Ordnerstrukturen im Live-Betrieb
         return pd.DataFrame()
         
-    try:
-        sia = SentimentIntensityAnalyzer()
-    except LookupError:
-        # Streamlit Cloud images may miss NLTK resources on first boot.
-        try:
-            nltk.download("vader_lexicon", quiet=True)
-            sia = SentimentIntensityAnalyzer()
-        except Exception:
-            return pd.DataFrame()
+    sia = _build_sentiment_analyzer()
+    if sia is None:
+        return pd.DataFrame()
 
     data = []
-    
+
     for article in articles:
         verein = article.get("wikipedia_title")
         text = article.get("text_en", "")
@@ -98,7 +125,7 @@ def get_wikipedia_sentiment_dataframe(file_path="data/wikipedia_articles.json"):
                     "Grundstimmung": stimmung
                 })
             
-    # DataFrame erstellen und nach den positivsten Scores absteigend sortieren
+    # Das Frontend erwartet eine sortierte Tabelle mit den positivsten Teams oben.
     df = pd.DataFrame(data)
     if not df.empty:
         df = df.sort_values(by="Ø Sentiment-Score", ascending=False)
@@ -107,6 +134,7 @@ def get_wikipedia_sentiment_dataframe(file_path="data/wikipedia_articles.json"):
 
 def get_team_sentiment(team_name: str, file_path="data/wikipedia_articles.json") -> dict | None:
     """Liefert den Sentiment-Wert und die textuelle Einstufung für ein Team."""
+    # Direktes Team-Mapping für die Statistik-Ansicht.
     if not team_name or team_name == "Alle Teams":
         return None
 

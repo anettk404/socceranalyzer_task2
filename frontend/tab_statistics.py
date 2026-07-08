@@ -2,12 +2,16 @@
 tab_statistics.py – Statistiken-Tab
 
 ------------------------------------------------------------------------------------------------
-Design der KPI-Karten (Platz, Punkte, Siege, Tore, Chancenverwertung, Gegentore, Druckresistenz)
+Design der KPI-Karten (Platz, Punkte, Siege, Tore, Gegentore, xG)
 Word Cloud pro Verein (Wikipedia)
+Sentiment-Analyse-Feld (Wikipedia)
 Balkendiagramme (Vergleich zweier Teams)
+etc.
 ------------------------------------------------------------------------------------------------
 """
 # Authorin: Annette Kufner
+
+# Hinweis: Dieses Skript wurde mithilfe von Codex, Gemini und Claude entwickelt.
 
 
 # =====================================================
@@ -43,11 +47,7 @@ from services.stats_tab_service import (  # noqa: E402
 
 
 # =====================================================
-# 2) Statische UI-/Filter-Defaults
-# =====================================================
-
-# =====================================================
-# 3) Datenzugriff: verfügbare Filterwerte aus der DB
+# 2) Datenzugriff: verfügbare Filterwerte aus der DB
 # =====================================================
 
 @st.cache_data(show_spinner=False)
@@ -91,7 +91,7 @@ def format_liga_option_label(liga_name: str) -> str:
 
 
 # =====================================================
-# 4) KPI-Loader: OpenLigaDB + StatsBomb Kombination
+# 3) KPI-Loader: OpenLigaDB + StatsBomb Kombination
 # =====================================================
 
 @st.cache_data(show_spinner=False)
@@ -107,7 +107,7 @@ def load_leistung_kpis_from_db(liga: str, saison: str, team_name: str) -> dict |
 
 
 # =====================================================
-# 5) UI-Bausteine: KPI-Card + Sentiment-Card + Wortwolke
+# 4) UI-Bausteine: KPI-Card + Sentiment-Card + Wortwolke
 # =====================================================
 
 def render_kpi_card(
@@ -126,8 +126,8 @@ def render_kpi_card(
         f"""
         <div style="
             opacity: {opacity};
-            min-height: 76px;
-            padding: 0.45rem 0.6rem 0.42rem 0.6rem;
+            min-height: 86px;
+            padding: 0.55rem 0.68rem 0.5rem 0.68rem;
             border-radius: 15px;
             border: 1px solid rgba(148, 163, 184, 0.28);
             border-left: 1px solid rgba(148, 163, 184, 0.28);
@@ -136,10 +136,12 @@ def render_kpi_card(
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            gap: 0.18rem;
+            overflow: hidden;
         ">
-            <div style="font-size: 0.7rem; font-weight: 800; color: #334155; line-height: 1.1; text-transform: uppercase; letter-spacing: 0.04em;">{label}</div>
-            <div style="font-size: 1.18rem; font-weight: 850; color: #0f172a; line-height: 1.05; margin-top: 0.1rem; word-break: break-word;">{display_value}</div>
-            <div style="font-size: 0.68rem; font-weight: 700; color: rgba(15, 23, 42, 0.72); line-height: 1.1; min-height: 0.85rem;">{detail}</div>
+            <div style="font-size: 0.63rem; font-weight: 800; color: #334155; line-height: 1.0; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{label}</div>
+            <div style="font-size: 1.02rem; font-weight: 850; color: #0f172a; line-height: 1.0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{display_value}</div>
+            <div style="font-size: 0.63rem; font-weight: 700; color: rgba(15, 23, 42, 0.72); line-height: 1.0; min-height: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{detail}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -166,7 +168,7 @@ def _sentiment_color(sentiment_label: str) -> str:
 
 def render_sentiment_section(team_name: str, source_enabled: bool = True):
     """Rendert die Sentiment-Sektion unterhalb der KPI-Übersicht."""
-    st.markdown("### Sentiment Analyse")
+    st.markdown('<div class="stats-section-title">Sentiment Analyse</div>', unsafe_allow_html=True)
 
     if not source_enabled:
         st.info("Datenquelle Wikipedia ist deaktiviert.")
@@ -418,10 +420,23 @@ def render_statistics_tab() -> None:
     <style>
         .stats-focus-team {
             color: #2d5a27;
+            font-family: var(--gsa-heading-font, "Segoe UI", sans-serif);
             font-weight: 700;
-            font-size: 1.6rem;
+            font-size: 1.18rem;
+            line-height: 1.08;
+            letter-spacing: -0.01em;
             margin-top: 0.45rem;
-            margin-bottom: 0.1rem;
+            margin-bottom: 0.12rem;
+        }
+        .stats-section-title {
+            color: #1f2937;
+            font-family: var(--gsa-heading-font, "Segoe UI", sans-serif);
+            font-weight: 700;
+            font-size: 1.02rem;
+            line-height: 1.08;
+            letter-spacing: -0.01em;
+            margin-top: 0.3rem;
+            margin-bottom: 0.05rem;
         }
         div[data-testid="column"] .stMarkdown {
             width: 100%;
@@ -475,7 +490,7 @@ def render_statistics_tab() -> None:
 
 
 # =====================================================
-# 6) Seitenlogik: KPI-Bereich, Sentiment, Wortwolke, Vergleich
+# 5) Seitenlogik: KPI-Bereich, Sentiment, Wortwolke, Vergleich
 # =====================================================
 
 def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict = None):
@@ -546,11 +561,10 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
         ],
     ]
 
-    kpi_col, wordcloud_col = st.columns([0.88, 1.52], gap="large")
+    kpi_col, wordcloud_col = st.columns([1.05, 1.35], gap="large")
 
     with kpi_col:
-        # Überschrift für den KPI-Block (gleiche Größenlogik wie Sentiment-Überschrift).
-        st.markdown("### Übersicht")
+        st.markdown('<div class="stats-section-title">Übersicht</div>', unsafe_allow_html=True)
         for row_items in kpi_rows:
             row_cols = st.columns(3, gap="small")
             for index, card in enumerate(row_items):
@@ -600,5 +614,8 @@ def render_statistics(liga: str, saison: str, team: str, sources_enabled: dict =
     )
     
     # Bereich 2: direkter Teamvergleich mit zwei synchronen Diagrammen.
-    st.markdown(f"### Team-Vergleich · {format_liga_option_label(liga)} · {saison}")
+    st.markdown(
+        f'<div class="stats-focus-team">Teamvergleich: {format_liga_option_label(liga)} · {saison}</div>',
+        unsafe_allow_html=True,
+    )
     render_comparison_chart(team, liga, saison, ["Bayern", "Dortmund", "Leverkusen", "Mainz", "Leipzig"])

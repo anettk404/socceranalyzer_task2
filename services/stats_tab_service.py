@@ -1,4 +1,12 @@
-"""Business logic layer for statistics tab view models."""
+"""
+Titel: Statistik-Viewmodel-Service
+Beschreibung: Dieses Modul verbindet Repository- und StatsBomb-Daten zu den
+              aufbereiteten Kennzahlen, die das Statistik-Frontend direkt nutzen kann.
+Wichtige Inhalte: KPI-Kombination, xG-Fallback, Vergleichsdaten, Sentiment-Weiterleitung.
+Autorin: Annette Kufner
+
+Hinweis: Dieses Skript wurde mithilfe von Gemini, Claude und Codex erstellt.
+"""
 
 import pandas as pd
 
@@ -8,6 +16,7 @@ from services.stats_kpi_service import load_statsbomb_kpis_from_db
 from services.stats_repository import load_top_kpis_from_db
 
 
+# Hier werden OpenLigaDB- und StatsBomb-Kennzahlen für den Statistik-Tab zusammengeführt.
 def load_leistung_kpis_for_stats_tab(liga: str, saison: str, team_name: str) -> dict | None:
     """Lädt kombinierte Leistungs-KPIs und nutzt bei Bedarf StatsBomb-Saisonfallback."""
     table_kpis = load_top_kpis_from_db(liga, saison, team_name)
@@ -44,13 +53,12 @@ def load_leistung_kpis_for_stats_tab(liga: str, saison: str, team_name: str) -> 
         "Tore": table_kpis["Tore"],
         "Gegentore": table_kpis["Gegentore"],
         "xG": xg_per_game,
-        "Chancenverwertung": statsbomb_kpis.get("Chancenverwertung") if statsbomb_kpis else None,
-        "Druckresistenz": statsbomb_kpis.get("Druckresistenz") if statsbomb_kpis else None,
         "statsbomb_season_used": statsbomb_season_used if statsbomb_kpis else None,
     }
 
 
 def build_comparison_chart_data_for_stats_tab(liga: str, saison: str, team_name: str) -> tuple[pd.DataFrame, dict | None]:
+    # Die Vergleichsgrafik arbeitet mit exakt drei Metriken, damit beide Teamseiten gleich aussehen.
     kpis = load_leistung_kpis_for_stats_tab(liga, saison, team_name)
     if kpis is None:
         return pd.DataFrame({"Metrik": ["Tore", "xG-Index pro Spiel", "Gegentore"], "Wert": [0, None, 0]}), None
@@ -68,6 +76,7 @@ def build_comparison_chart_data_for_stats_tab(liga: str, saison: str, team_name:
 
 
 def get_team_sentiment_for_stats_tab(team_name: str) -> dict | None:
+    # Sentiment ist ein optionaler Zusatzwert und darf die Statistikseite nie blockieren.
     sentiment_path = PROJECT_ROOT / "data" / "wikipedia_articles.json"
     try:
         return get_team_sentiment(team_name, file_path=str(sentiment_path))

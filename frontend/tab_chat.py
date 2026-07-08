@@ -146,7 +146,7 @@ def render_chat_tab():
         st.markdown("""
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
             <div style="display:flex;align-items:center;gap:0.6rem">
-                <strong>GSA Chat-Analyse</strong>
+                <span class="app-focus-title" style="color:#0f172a;">GSA Chat-Analyse</span>
                 <span style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;
                              padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600">
                     Multi-Agent aktiv

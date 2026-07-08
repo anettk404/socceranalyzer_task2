@@ -1,4 +1,12 @@
-"""Repository layer for statistics tab reads from soccer.db."""
+"""
+Titel: Statistik-Repository
+Beschreibung: Dieses Modul liest Filteroptionen und OpenLigaDB-KPIs aus der lokalen
+              soccer.db und liefert die Daten für die Statistik-Ansicht.
+Wichtige Inhalte: Ligafilter, Saisonfilter, Teamfilter, KPI-Lookup aus SQLite.
+Autorin: Annette Kufner
+
+Hinweis: Dieses Skript wurde mithilfe von Gemini, Claude und Codex erstellt.
+"""
 
 import sqlite3
 from pathlib import Path
@@ -6,6 +14,7 @@ from pathlib import Path
 from services.stats_constants import DB_PATH
 from services.stats_mapping_service import normalize_openliga_season_label, normalize_openliga_team_name
 
+# Fallback-Werte sorgen dafür, dass die UI auch ohne fertige Datenbank nutzbar bleibt.
 DEFAULT_LIGA_OPTIONS = ["Alle Ligen", "1. Bundesliga", "La Liga", "Premier League", "Serie A", "Ligue 1"]
 FALLBACK_TEAM_OPTIONS_BY_LIGA = {
     "Alle Ligen": ["Alle Teams"],
@@ -23,6 +32,7 @@ FALLBACK_TEAM_OPTIONS_BY_LIGA = {
 
 FALLBACK_ALL_TEAMS = ["Alle Teams", *sorted({
     team
+# Hilfsfunktion zum Prüfen, welche Spalten in der aktuellen SQLite-Tabelle vorhanden sind.
     for liga, teams in FALLBACK_TEAM_OPTIONS_BY_LIGA.items()
     if liga != "Alle Ligen"
     for team in teams
@@ -122,6 +132,7 @@ def get_available_teams(liga: str, saison: str, db_path: Path | None = None) -> 
 
 def load_top_kpis_from_db(liga: str, saison: str, team_name: str, db_path: Path | None = None) -> dict | None:
     """Liest Platz, Punkte, Siege, Niederlagen, Tore und Gegentore aus soccer.db."""
+    # Die Statistik-Ansicht benötigt genau einen Datensatz passend zu den Filtern.
     database_path = db_path or DB_PATH
     if not database_path.exists():
         return None

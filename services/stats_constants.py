@@ -1,14 +1,27 @@
-"""Shared constants for stats-related services."""
+"""
+Titel: Statistik-Konstanten
+
+Beschreibung: Dieses Modul bündelt die zentralen Pfade, Filterwerte und
+              Team-Mappings, die von den Statistik-Services gemeinsam genutzt werden.
+Wichtige Inhalte: Projektpfade, Datenbankpfad, Liga-Filter, Team-Übersetzungen.
+
+Autorin: Annette Kufner
+
+Hinweis: Dieses Skript wurde mithilfe von Gemini, Claude und Codex erstellt.
+"""
 
 from pathlib import Path
 
 
+# Zentrale Pfade für Datenbank und Export-Dateien.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "data" / "soccer.db"
 EXPORT_DIR = PROJECT_ROOT / "data"
 
+# Ligen, die im UI und in den StatsBomb-Abfragen aktiv gefiltert werden können.
 FILTERABLE_LEAGUES = {"1. Bundesliga", "La Liga", "Premier League", "Serie A", "Ligue 1"}
 
+# Team-Mapping für abweichende Namensformen zwischen OpenLigaDB, StatsBomb und UI.
 TEAM_NAME_OVERRIDES = {
     "FC Bayern München": "Bayern Munich",
     "Bayer 04 Leverkusen": "Bayer Leverkusen",
@@ -30,6 +43,7 @@ TEAM_NAME_OVERRIDES = {
     "Paris Saint-Germain": "Paris Saint-Germain",
 }
 
+# UI-Auswahlwerte werden hier auf die in OpenLigaDB gespeicherten Namen normalisiert.
 UI_TO_OPENLIGA_TEAM = {
     "FC Bayern München": "FC Bayern München",
     "Bayer 04 Leverkusen": "Bayer 04 Leverkusen",

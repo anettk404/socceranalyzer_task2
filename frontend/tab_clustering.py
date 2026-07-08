@@ -65,7 +65,7 @@ def render_clustering_tab():
         .cluster-header {
             display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;
         }
-        .cluster-title { font-weight: 700; font-size: 1rem; }
+        .cluster-title { font-weight: 700; font-size: 1rem; font-family: var(--gsa-heading-font, "Segoe UI", sans-serif); }
         .cluster-subtitle {
             background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
             padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;
@@ -110,7 +110,7 @@ def render_clustering_tab():
     with col_main:
         st.markdown("""
         <div class="cluster-header">
-            <span class="cluster-title">Vereins-Clustering</span>
+            <span class="app-focus-title">Vereins-Clustering</span>
             <span class="cluster-subtitle">TF-IDF + KMeans + LLM-Labels</span>
             <span class="cluster-source">Quelle: Wikipedia</span>
         </div>
