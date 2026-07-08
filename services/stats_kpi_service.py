@@ -1,4 +1,16 @@
-"""SQL helpers for StatsBomb KPIs used in the statistics tab."""
+"""
+Titel: StatsBomb-KPI-Service
+
+Beschreibung: Dieses Modul berechnet StatsBomb-Kennzahlen aus SQLite-Tabellen oder
+              Legacy-Exports und stellt die für die Statistik-Ansicht benötigten
+              xG- und Tor-Kennzahlen bereit.
+Wichtige Inhalte: SQL-Abfragen, Summary-Table-Fallback, xG pro Spiel, Tore,
+                  saisonbezogene Export-Utilities.
+                  
+Autorin: Annette Kufner
+
+Hinweis: Dieses Skript wurde mithilfe von Gemini, Claude und Codex erstellt.
+"""
 
 import json
 import sqlite3
@@ -13,6 +25,7 @@ from services.stats_mapping_service import (
 )
 
 
+# Tabellen- und Datei-Checks halten die SQL-Logik robust gegenüber wechselnden DB-Schemata.
 def _table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
     rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
     return {row[1] for row in rows}
@@ -30,13 +43,6 @@ def _statsbomb_filter_supported(liga: str | None) -> bool:
     return liga in (None, "", "Alle Ligen") or liga in FILTERABLE_LEAGUES
 
 
-def _statsbomb_export_path(saison_label: str) -> Path | None:
-    normalized = normalize_openliga_season_label(saison_label)
-    if not normalized:
-        return None
-    return EXPORT_DIR / f"statsbomb_kpis_{normalized.replace('/', '_')}.json"
-
-
 def _ensure_statsbomb_summary_table(conn: sqlite3.Connection) -> bool:
     conn.execute(
         """
@@ -45,11 +51,8 @@ def _ensure_statsbomb_summary_table(conn: sqlite3.Connection) -> bool:
             team TEXT NOT NULL,
             xg_total REAL,
             xg_per_game REAL,
-            chance_delta REAL,
-            druckresistenz REAL,
             tore INTEGER,
             spiele INTEGER,
-            druckereignisse INTEGER,
             PRIMARY KEY (season_label, team)
         )
         """
@@ -59,6 +62,7 @@ def _ensure_statsbomb_summary_table(conn: sqlite3.Connection) -> bool:
     if existing_rows:
         return True
 
+    # Falls die Live-Tabellen fehlen, werden Kennzahlen aus den Export-JSONs rekonstruiert.
     export_files = sorted(EXPORT_DIR.glob("statsbomb_kpis_*.json"))
     inserted = 0
 
@@ -80,11 +84,8 @@ def _ensure_statsbomb_summary_table(conn: sqlite3.Connection) -> bool:
                     team_name,
                     team_payload.get("Chancen_Qualitaet_xG"),
                     team_payload.get("xG_Pro_Spiel", team_payload.get("Chancen_Qualitaet_xG")),
-                    team_payload.get("Tor_Effizienz_Delta"),
-                    team_payload.get("Druck_Resistenz_Prozent"),
                     team_payload.get("Tore"),
                     team_payload.get("Spiele"),
-                    team_payload.get("Druckereignisse"),
                 )
             )
 
@@ -92,9 +93,8 @@ def _ensure_statsbomb_summary_table(conn: sqlite3.Connection) -> bool:
             conn.executemany(
                 """
                 INSERT OR REPLACE INTO statsbomb_kpis (
-                    season_label, team, xg_total, xg_per_game, chance_delta,
-                    druckresistenz, tore, spiele, druckereignisse
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    season_label, team, xg_total, xg_per_game, tore, spiele
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 rows,
             )
@@ -115,8 +115,7 @@ def _load_statsbomb_kpis_from_summary_table(conn: sqlite3.Connection, team_name:
 
     row = conn.execute(
         """
-        SELECT season_label, team, xg_total, xg_per_game, chance_delta, druckresistenz,
-               tore, spiele, druckereignisse
+        SELECT season_label, team, xg_total, xg_per_game, tore, spiele
         FROM statsbomb_kpis
         WHERE season_label = ? AND team = ?
         """,
@@ -129,18 +128,16 @@ def _load_statsbomb_kpis_from_summary_table(conn: sqlite3.Connection, team_name:
     return {
         "team": team_name,
         "statsbomb_team": row[1],
-        "Chancenverwertung": row[4],
-        "Druckresistenz": row[5],
-        "Tore": row[6],
+        "Tore": row[4],
         "xG": row[2],
         "xG pro Spiel": row[3],
-        "Spiele": row[7],
-        "Druckereignisse": row[8],
+        "Spiele": row[5],
     }
 
 
 def load_statsbomb_kpis_from_db(team_name: str, saison_label: str, liga: str, db_path: Path | None = None) -> dict | None:
-    """Aggregate Chancenverwertung and Druckresistenz from soccer.db via SQL."""
+    """Aggregiert xG und Tore aus soccer.db via SQL."""
+    # Erst versuchen wir die direkten Event-Tabellen, danach den Summary-Fallback.
     if not _statsbomb_filter_supported(liga):
         return None
 
@@ -198,8 +195,6 @@ def load_statsbomb_kpis_from_db(team_name: str, saison_label: str, liga: str, db
                 COUNT(DISTINCT match_id) AS spiele,
                 COALESCE(SUM(CASE WHEN type = 'Shot' AND shot_outcome = 'Goal' THEN 1 ELSE 0 END), 0) AS tore,
                 COALESCE(SUM(CASE WHEN type = 'Shot' THEN shot_xg ELSE 0 END), 0) AS xg_summe,
-                COALESCE(SUM(CASE WHEN type = 'Pressure' THEN 1 ELSE 0 END), 0) AS druck_ereignisse,
-                COALESCE(SUM(CASE WHEN type = 'Pressure' AND COALESCE(next_play_pattern, '') <> 'From Lost Ball' THEN 1 ELSE 0 END), 0) AS druck_entkommen
             FROM filtered_events
         """
 
@@ -209,187 +204,27 @@ def load_statsbomb_kpis_from_db(team_name: str, saison_label: str, liga: str, db
         with sqlite3.connect(database_path) as conn:
             return _load_statsbomb_kpis_from_summary_table(conn, team_name, saison_label)
 
-    # Avoid misleading "0" KPIs when the filter combination has no StatsBomb events.
+    # Leere Filterkombinationen sollen nicht als echte 0er-KPIs erscheinen.
     if int(row["event_count"] or 0) == 0:
         with sqlite3.connect(database_path) as conn:
             return _load_statsbomb_kpis_from_summary_table(conn, team_name, saison_label)
 
-    pressure_events = int(row["druck_ereignisse"])
-    pressure_escape = int(row["druck_entkommen"])
     match_count = int(row["spiele"] or 0)
-    pressure_rate = round((pressure_escape / pressure_events) * 100, 1) if pressure_events else 0.0
-    chance_delta = round(float(row["tore"]) - float(row["xg_summe"]), 1)
     xg_per_match = round(float(row["xg_summe"]) / match_count, 2) if match_count else None
 
     return {
         "team": team_name,
         "statsbomb_team": statsbomb_team,
-        "Chancenverwertung": chance_delta,
-        "Druckresistenz": pressure_rate,
         "Tore": int(row["tore"]),
         "xG": round(float(row["xg_summe"]), 1),
         "xG pro Spiel": xg_per_match,
         "Spiele": match_count,
-        "Druckereignisse": pressure_events,
-    }
-
-
-def _min_max_scale(values: list[float]) -> list[float]:
-    if not values:
-        return []
-
-    minimum = min(values)
-    maximum = max(values)
-    if maximum == minimum:
-        return [1.0 if value > 0 else 0.0 for value in values]
-
-    span = maximum - minimum
-    return [(value - minimum) / span for value in values]
-
-
-def load_statsbomb_player_score_from_db(team_name: str, saison_label: str, liga: str, db_path: Path | None = None) -> dict | None:
-    """Berechnet einen zusammengesetzten StatsBomb-Score fuer den besten Spieler eines Teams."""
-    if not _statsbomb_filter_supported(liga):
-        return None
-
-    if team_name in (None, "", "Alle Teams"):
-        return None
-
-    database_path = db_path or DB_PATH
-    with sqlite3.connect(database_path) as conn:
-        conn.row_factory = sqlite3.Row
-
-        full_statsbomb_available = _table_exists(conn, "statsbomb_matches") and _table_exists(conn, "statsbomb_events")
-        if not full_statsbomb_available:
-            return None
-
-        match_columns = _table_columns(conn, "statsbomb_matches")
-        statsbomb_team = resolve_statsbomb_team_name(conn, team_name, liga, saison_label, match_columns)
-        if statsbomb_team is None:
-            return None
-
-        where_clauses = ["e.team = :team", "e.player IS NOT NULL", "TRIM(e.player) <> ''"]
-        params: dict[str, str] = {"team": statsbomb_team}
-
-        if "league" in match_columns and liga not in (None, "", "Alle Ligen"):
-            where_clauses.append("m.league = :league")
-            params["league"] = liga
-
-        statsbomb_season = normalize_statsbomb_season_label(saison_label)
-        if statsbomb_season:
-            if "season_label" in match_columns:
-                where_clauses.append("m.season_label = :season_label")
-                params["season_label"] = normalize_openliga_season_label(saison_label)
-            elif "season" in match_columns:
-                where_clauses.append("m.season = :season")
-                params["season"] = statsbomb_season
-
-        sql = f"""
-            WITH filtered_events AS (
-                SELECT
-                    e.match_id,
-                    e.player,
-                    e.type,
-                    CAST(COALESCE(e.shot_statsbomb_xg, 0) AS REAL) AS shot_xg,
-                    e.shot_outcome,
-                    e.pass_outcome
-                FROM statsbomb_events e
-                JOIN statsbomb_matches m ON m.match_id = e.match_id
-                WHERE {' AND '.join(where_clauses)}
-            )
-            SELECT
-                player,
-                COUNT(DISTINCT match_id) AS matches,
-                COALESCE(SUM(CASE WHEN type = 'Shot' AND shot_outcome = 'Goal' THEN 1 ELSE 0 END), 0) AS goals,
-                COALESCE(SUM(CASE WHEN type = 'Shot' THEN shot_xg ELSE 0 END), 0) AS xg,
-                COALESCE(SUM(CASE WHEN type = 'Shot' THEN 1 ELSE 0 END), 0) AS shots,
-                COALESCE(SUM(CASE WHEN type = 'Pass' THEN 1 ELSE 0 END), 0) AS passes,
-                COALESCE(SUM(CASE WHEN type = 'Pass' AND pass_outcome IS NULL THEN 1 ELSE 0 END), 0) AS completed_passes,
-                COALESCE(SUM(CASE WHEN type = 'Pressure' THEN 1 ELSE 0 END), 0) AS pressures,
-                COALESCE(SUM(CASE WHEN type = 'Ball Recovery' THEN 1 ELSE 0 END), 0) AS recoveries,
-                COALESCE(SUM(CASE WHEN type = 'Interception' THEN 1 ELSE 0 END), 0) AS interceptions,
-                COALESCE(SUM(CASE WHEN type = 'Dribble' THEN 1 ELSE 0 END), 0) AS dribbles,
-                COALESCE(SUM(CASE WHEN type = 'Carry' THEN 1 ELSE 0 END), 0) AS carries,
-                COALESCE(SUM(CASE WHEN type = 'Clearance' THEN 1 ELSE 0 END), 0) AS clearances,
-                COALESCE(SUM(CASE WHEN type = 'Block' THEN 1 ELSE 0 END), 0) AS blocks
-            FROM filtered_events
-            GROUP BY player
-            HAVING COUNT(DISTINCT match_id) > 0
-        """
-
-        rows = conn.execute(sql, params).fetchall()
-
-    if not rows:
-        return None
-
-    player_rows: list[dict[str, float | int | str]] = []
-    for row in rows:
-        matches = max(int(row["matches"] or 0), 1)
-        passes = int(row["passes"] or 0)
-        completed_passes = int(row["completed_passes"] or 0)
-
-        player_rows.append({
-            "player": row["player"],
-            "matches": matches,
-            "goals_per_match": float(row["goals"] or 0) / matches,
-            "xg_per_match": float(row["xg"] or 0) / matches,
-            "shots_per_match": float(row["shots"] or 0) / matches,
-            "pass_accuracy": (completed_passes / passes) if passes else 0.0,
-            "passes_per_match": passes / matches,
-            "pressures_per_match": float(row["pressures"] or 0) / matches,
-            "recoveries_per_match": float(row["recoveries"] or 0) / matches,
-            "interceptions_per_match": float(row["interceptions"] or 0) / matches,
-            "dribbles_per_match": float(row["dribbles"] or 0) / matches,
-            "carries_per_match": float(row["carries"] or 0) / matches,
-            "clearances_per_match": float(row["clearances"] or 0) / matches,
-            "blocks_per_match": float(row["blocks"] or 0) / matches,
-        })
-
-    feature_weights = {
-        "goals_per_match": 24.0,
-        "xg_per_match": 16.0,
-        "shots_per_match": 8.0,
-        "pass_accuracy": 10.0,
-        "passes_per_match": 9.0,
-        "pressures_per_match": 8.0,
-        "recoveries_per_match": 8.0,
-        "interceptions_per_match": 8.0,
-        "dribbles_per_match": 4.0,
-        "carries_per_match": 2.0,
-        "clearances_per_match": 1.5,
-        "blocks_per_match": 1.5,
-    }
-
-    scaled_features: dict[str, list[float]] = {}
-    for feature_name in feature_weights:
-        scaled_features[feature_name] = _min_max_scale([float(player[feature_name]) for player in player_rows])
-
-    for index, player in enumerate(player_rows):
-        raw_score = 0.0
-        for feature_name, weight in feature_weights.items():
-            raw_score += scaled_features[feature_name][index] * weight
-        player["score"] = round(raw_score, 1)
-
-    best_player = max(
-        player_rows,
-        key=lambda player: (
-            float(player["score"]),
-            float(player["goals_per_match"]),
-            float(player["xg_per_match"]),
-            float(player["shots_per_match"]),
-            float(player["passes_per_match"]),
-        ),
-    )
-
-    return {
-        "Bester Spieler": str(best_player["player"]),
-        "StatsBomb-Score": float(best_player["score"]),
-        "StatsBomb-Score-Spieleranzahl": len(player_rows),
     }
 
 
 def generiere_und_speichere_statsbomb_kpis(saison_label: str, ausgabe_datei: str) -> None:
     """Export legacy JSON snapshots from soccer.db instead of from the API."""
+    # Diese Funktion erzeugt die JSON-Exports, die ältere Workflows weiterverwenden.
     export_path = Path(ausgabe_datei)
     export_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -411,11 +246,8 @@ def generiere_und_speichere_statsbomb_kpis(saison_label: str, ausgabe_datei: str
                 "Verein": openliga_team,
                 "Chancen_Qualitaet_xG": kpis["xG"],
                 "xG_Pro_Spiel": kpis["xG pro Spiel"],
-                "Tor_Effizienz_Delta": kpis["Chancenverwertung"],
-                "Druck_Resistenz_Prozent": kpis["Druckresistenz"],
                 "Spiele": kpis["Spiele"],
                 "Tore": kpis["Tore"],
-                "Druckereignisse": kpis["Druckereignisse"],
             }
 
     if not saison_kpis:
@@ -432,6 +264,7 @@ def generiere_und_speichere_statsbomb_kpis(saison_label: str, ausgabe_datei: str
 
 def generiere_alle_statsbomb_kpis() -> None:
     """Schreibt KPI-Exports fuer alle in statsbomb_matches vorhandenen Saisons."""
+    # Alle verfügbaren Saisons werden nacheinander exportiert.
     if not DB_PATH.exists():
         return
 
