@@ -1,3 +1,6 @@
+# Autor: Selma Elezovic
+# Datenbankzugriff: Schema-Definition für den SQL-Generator und run_query() für alle Agenten.
+
 import sqlite3
 from pathlib import Path
 

@@ -1,3 +1,7 @@
+# Autor: Selma Elezovic
+# RAG-Agent: sucht relevante Wikipedia-Textabschnitte über Pinecone (Vektordatenbank)
+# und formuliert daraus eine Antwort zu Vereinsgeschichte, Titeln und Hintergrundwissen.
+
 import os
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -6,6 +10,8 @@ from pinecone import Pinecone
 
 from .shared import llm, PROMPTS, GraphState
 
+# Lazy-initialized on first call — Pinecone-Verbindung und Embedding-Modell
+# werden nur einmal aufgebaut und dann wiederverwendet.
 _pc: Pinecone | None = None
 _index = None
 _embed_model: OpenAIEmbedding | None = None
@@ -34,15 +40,19 @@ def _get_embed_model() -> OpenAIEmbedding:
 
 
 def _retrieve(question: str) -> str:
+    """Wandelt die Frage in einen Embedding-Vektor um und sucht die Top-K ähnlichsten
+    Wikipedia-Chunks in Pinecone. Gibt die Texte mit Team/Liga-Metadaten zurück."""
     embed_model = _get_embed_model()
     index = _get_pinecone_index()
 
+    # Frage als Vektor kodieren und semantisch ähnliche Chunks suchen
     query_vector = embed_model.get_query_embedding(question)
     results = index.query(vector=query_vector, top_k=TOP_K, include_metadata=True)
 
     if not results["matches"]:
         return "Keine relevanten Dokumente gefunden."
 
+    # Metadaten (Team, Liga) als Kontext-Header vor jeden Chunk stellen
     chunks = []
     for match in results["matches"]:
         meta = match["metadata"]

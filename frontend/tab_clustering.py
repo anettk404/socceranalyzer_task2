@@ -1,6 +1,15 @@
-# -----------------------------------------------
-# tab_clustering.py
-# -----------------------------------------------
+"""
+tab_clustering.py – Clustering-Tab
+
+Autorin: Susanne Schmid
+
+------------------------------------------------------------------------------------------------
+Vereins-Clustering auf Basis von Wikipedia-Artikeln.
+TF-IDF Vektorisierung + KMeans Clustering + PCA-Reduktion für 2D-Visualisierung.
+LLM-basiertes Labeling der gefundenen Cluster (GPT-4o-mini).
+Filter: Liga-Auswahl (Dropdown) und Cluster-Anzahl k (Slider).
+------------------------------------------------------------------------------------------------
+"""
 
 import sys
 import os
@@ -10,7 +19,6 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from Clustering.clustering import load_articles, run_clustering, get_top_terms_per_cluster, label_clusters
-
 
 
 CLUSTER_COLORS = ["#2ecc71", "#3b82f6", "#f39c12", "#9b59b6", "#e74c3c"]

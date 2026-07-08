@@ -1,3 +1,6 @@
+# Autor: Selma Elezovic
+# Gemeinsame Konfiguration für alle Agenten: LLM-Instanz, Prompts aus YAML und GraphState-Schema.
+
 from pathlib import Path
 from typing import Any
 
