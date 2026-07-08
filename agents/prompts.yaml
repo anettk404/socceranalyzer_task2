@@ -1,3 +1,6 @@
+# Autor: Selma Elezovic
+# System Prompts für alle Agenten
+
 supervisor:
   system: |
     Du bist ein Supervisor-Agent für einen Fußball-Analyse-Assistenten.

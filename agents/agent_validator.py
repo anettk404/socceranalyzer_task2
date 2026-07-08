@@ -26,25 +26,35 @@ _SOCCER_ENTITIES = [
     "dfb", "fifa", "uefa", "cl-", "cl ", "em", "wm",
 ]
 
-# Wichtige faktische Schlüsselbegriffe die auf prüfbare Aussagen hinweisen
+# Schlüsselbegriffe die auf faktische, prüfbare Aussagen hinweisen.
+# Wird genutzt um zu entscheiden ob ein RAG-Abruf sinnvoll ist.
 _FACT_INDICATORS = [
     "gegründet", "titel", "gewonnen", "geboren", "gestorben", "stadion",
     "champions", "meisterschaft", "rekord", "trainer", "gründer", "geschichte",
     "wurde", "hat", "ist", "sind", "war", "waren",
 ]
 
-# Zahlen-Muster: Jahreszahlen, Titelanzahlen, Statistiken
+# Regex für Zahlen: trifft Jahreszahlen (4 Stellen) und kurze Zahlen (1–3 Stellen)
 _NUMBER_PATTERN = re.compile(r'\b\d{4}\b|\b\d{1,3}\b')
 
 
 def _needs_fact_check(answer: str) -> bool:
-    """Heuristik: enthält die Antwort faktische Aussagen die überprüft werden sollten?"""
+    """Heuristik: enthält die Antwort faktische Aussagen die überprüft werden sollten?
+
+    Gibt True zurück wenn mindestens ein Wort aus _FACT_INDICATORS in der Antwort vorkommt.
+    Bei True wird zusätzlich ein RAG-Abruf angestoßen um die Fakten zu verifizieren.
+    """
     answer_lower = answer.lower()
     return any(word in answer_lower for word in _FACT_INDICATORS)
 
 
 def _is_out_of_domain(question: str, answer: str) -> bool:
-    """Prüft ob Frage/Antwort keinen Fußball-Bezug haben."""
+    """Prüft ob Frage/Antwort keinen Fußball-Bezug haben.
+
+    Gibt True zurück wenn kein einziger Eintrag aus _SOCCER_ENTITIES in der
+    kombinierten Frage+Antwort vorkommt. In diesem Fall wird die Confidence
+    auf maximal 0.3 gedeckelt.
+    """
     combined = (question + " " + answer).lower()
     return not any(ent in combined for ent in _SOCCER_ENTITIES)
 
@@ -56,6 +66,7 @@ def _extract_key_terms(text: str) -> list[str]:
     plus alle Zahlenfolgen (Jahreszahlen, Titelanzahlen, Statistikwerte).
     """
     words = re.findall(r'\b\w+\b', text.lower())
+    # Kurzwörter (Artikel, Präpositionen etc.) herausfiltern
     meaningful = [w for w in words if len(w) >= 4]
     numbers = _NUMBER_PATTERN.findall(text)
     return list(set(meaningful + numbers))
@@ -64,8 +75,8 @@ def _extract_key_terms(text: str) -> list[str]:
 def _entities_in_context(question: str, answer: str, context: str) -> bool:
     """Prüft ob zentrale Entitäten aus Frage/Antwort im Quellenkontext vorkommen.
 
-    Gibt True zurück wenn mindestens ein Schlüsselbegriff aus Frage oder Antwort
-    im Kontext gefunden wird — verhindert zu strenge Decklung bei breiten Fragen.
+    Gibt True zurück wenn mindestens 2 Schlüsselbegriffe aus Frage oder Antwort
+    im Kontext gefunden werden — verhindert zu strenge Decklung bei breiten Fragen.
     """
     context_lower = context.lower()
     terms = _extract_key_terms(question + " " + answer)
@@ -80,9 +91,14 @@ def _contains_numbers(text: str) -> bool:
 
 
 def _numbers_in_context(answer: str, context: str) -> bool:
-    """Prüft ob die Zahlen aus der Antwort auch im Quellenkontext vorkommen."""
+    """Prüft ob die Zahlen aus der Antwort auch im Quellenkontext vorkommen.
+
+    Gibt True zurück wenn keine Zahlen in der Antwort enthalten sind (kein Konflikt),
+    oder wenn mindestens eine der Zahlen im Kontext auftaucht.
+    """
     answer_numbers = _NUMBER_PATTERN.findall(answer)
     if not answer_numbers:
+        # Keine Zahlen → kein Zahlenwiderspruch möglich
         return True
     context_lower = context.lower()
     return any(num in context_lower for num in answer_numbers)
@@ -91,18 +107,20 @@ def _numbers_in_context(answer: str, context: str) -> bool:
 def validator_agent(state: GraphState) -> GraphState:
     """Prüft die Antwort auf Halluzinationen und gibt einen Confidence-Score zurück.
 
-    Reihenfolge:
-    1. SQL-Ergebnis leer/Fehler → confidence 0.2
-    2. SQL-Daten vorhanden → LLM-Vergleich gegen Rohdaten
-    3. Faktische Antwort → RAG-Retrieval mit Frage+Antwort als Query (top_k=10)
-    4. Nachträgliche Confidence-Caps anhand Entitäts- und Zahlenprüfung
-    5. Out-of-domain → confidence <= 0.3
+    Ablauf in 5 Stufen:
+    1. SQL-Ergebnis leer oder fehlerhaft → confidence 0.2 (kein Datenbankbefund)
+    2. SQL-Daten vorhanden → LLM-Vergleich der Antwort gegen die Rohdaten
+    3. Faktische Antwort ohne SQL → RAG-Retrieval mit Frage+Antwort als Query (top_k=10)
+    4. Nachträgliche Confidence-Caps basierend auf Entitäts- und Zahlenpräsenz
+    5. Out-of-domain → confidence wird auf maximal 0.3 gedrückt
     """
     system_prompt = PROMPTS["validator"]["system"]
     answer = state["answer"]
     question = state["question"]
 
     # ── 1. SQL-Kurzschluss ──────────────────────────────────────────────────
+    # Wenn SQL ausgeführt wurde aber kein Ergebnis zurückgekommen ist oder ein
+    # Fehler aufgetreten ist, kann nichts verifiziert werden → niedrige Confidence
     sql_result = state.get("sql_result", "")
     sql_empty = sql_result in ("", "[]", None) or "SQL-Fehler" in (sql_result or "")
 
@@ -110,15 +128,18 @@ def validator_agent(state: GraphState) -> GraphState:
         return {**state, "answer": answer, "confidence": 0.2, "active_agent": "validator"}
 
     # ── 2. Quellenkontext aufbauen ───────────────────────────────────────────
+    # Entweder aus SQL-Daten oder aus RAG-Retrieval — niemals beides gleichzeitig
     source_context = ""
     source_label = ""
 
     if sql_result and not sql_empty:
+        # SQL-Rohdaten als primäre Quelle nutzen; auf 2000 Zeichen kürzen
+        # um den Kontext des LLM-Prompts nicht zu sprengen
         truncated = sql_result[:2000] + ("..." if len(sql_result) > 2000 else "")
         source_context = truncated
         source_label = "Datenbank"
     elif _needs_fact_check(answer):
-        # Frage + Antwort als Query für bessere Chunk-Treffsicherheit
+        # Frage + Antwort als Query für bessere Chunk-Treffsicherheit beim RAG
         retrieval_query = f"{question} {answer}"
         retrieved = _retrieve(retrieval_query, top_k=10)
         if retrieved and "Keine relevanten" not in retrieved:
@@ -126,6 +147,7 @@ def validator_agent(state: GraphState) -> GraphState:
             source_label = "Wissensdatenbank (Wikipedia)"
 
     # ── 3. LLM-Prompt aufbauen ───────────────────────────────────────────────
+    # Je nachdem ob Quelldaten vorhanden sind, erhält das LLM unterschiedliche Anweisungen
     if source_context:
         source_block = f"""
 VERIFIZIERTE QUELLDATEN ({source_label}):
@@ -140,12 +162,14 @@ AUFGABE: Prüfe die Antwort anhand der Quelldaten.
 - Stimmen die zentralen Fakten überein → Score 0.8–1.0.
 - Verwende AUSSCHLIESSLICH die Quelldaten — kein eigenes Modellwissen."""
     else:
+        # Kein Quellenkontext: LLM soll keine eigenen Fakten einbringen
         source_block = """
 KEINE QUELLDATEN VERFÜGBAR.
 - Enthält die Antwort konkrete Fakten (Zahlen, Daten, Namen)? → Score maximal 0.4.
 - Ist die Antwort inhaltslos oder am Thema vorbei? → Score 0.0–0.2.
 - Verwende kein eigenes Modellwissen zur Bewertung."""
 
+    # Vollständiger User-Prompt mit Frage, Antwort und Verifikationsanweisung
     user_content = f"""Frage: {question}
 
 Antwort des Agenten:
@@ -162,35 +186,43 @@ Antworte ausschließlich mit einem JSON-Objekt:
     response = llm.invoke(messages)
     raw = response.content.strip()
 
+    # LLM-Antwort parsen — bei Fehler auf sichere Standardwerte zurückfallen
     try:
         parsed = json.loads(raw)
         validated_answer = parsed.get("answer", answer)
         confidence = float(parsed.get("confidence", 0.5))
+        # Sicherstellen dass der Score im gültigen Bereich 0.0–1.0 liegt
         confidence = max(0.0, min(1.0, confidence))
     except (json.JSONDecodeError, ValueError, KeyError):
+        # Ungültiges JSON oder fehlende Felder → ursprüngliche Antwort behalten
         validated_answer = answer
         confidence = 0.5
 
     # ── 4. Nachträgliche Confidence-Caps ────────────────────────────────────
+    # Diese Caps überschreiben das LLM-Urteil wenn objektiv prüfbare Signale
+    # auf ein hohes Halluzinationsrisiko hinweisen.
 
-    # Out-of-domain: kein Fußball-Bezug erkennbar
+    # Out-of-domain: kein Fußball-Bezug erkennbar → hard cap bei 0.3
     if _is_out_of_domain(question, answer):
         confidence = min(confidence, 0.3)
 
-    # Inhaltsleere oder Off-topic-Antwort
+    # Inhaltsleere oder Off-topic-Antwort: Agent hat offensichtlich keine Daten gefunden
     empty_indicators = ["keine daten", "leider", "kann ich nicht", "nicht gefunden", "keine informationen"]
     if any(ind in answer.lower() for ind in empty_indicators):
         confidence = min(confidence, 0.2)
 
-    # Keine Quelle vorhanden + faktische Aussagen → maximal 0.4
+    # Keine Quelle vorhanden aber faktische Aussagen → maximal 0.4
+    # (LLM hat keine Möglichkeit die Fakten zu prüfen)
     if not source_context and _needs_fact_check(answer):
         confidence = min(confidence, 0.4)
 
     # Quelle vorhanden, aber zentrale Entitäten fehlen im Kontext → maximal 0.4
+    # (Quelle passt nicht zur Frage — wahrscheinlich falscher Chunk abgerufen)
     if source_context and not _entities_in_context(question, answer, source_context):
         confidence = min(confidence, 0.4)
 
     # Zahlen in Antwort aber nicht in Quelle → maximal 0.3
+    # (Starkes Signal für Halluzination — Zahlen sind besonders leicht zu erfinden)
     if source_context and _contains_numbers(answer) and not _numbers_in_context(answer, source_context):
         confidence = min(confidence, 0.3)
 
@@ -198,6 +230,7 @@ Antworte ausschließlich mit einem JSON-Objekt:
 
 
 if __name__ == "__main__":
+    # Manuelle Smoke-Tests direkt aus dem Modul heraus ausführbar
     test_cases = [
         {
             "label": "Korrekte Antwort",
@@ -221,6 +254,7 @@ if __name__ == "__main__":
         },
     ]
 
+    # Basis-State ohne Datenbankbezug (reiner RAG/Heuristik-Pfad)
     empty_base = {
         "route": "", "route_reason": "", "sql": "", "sql_result": "",
         "sub_answers": [], "steps": [], "active_agent": "", "confidence": 0.0,
@@ -230,6 +264,7 @@ if __name__ == "__main__":
     for tc in test_cases:
         state = {**empty_base, "question": tc["question"], "answer": tc["answer"]}
         result = validator_agent(state)
+        # Balkendiagramm aus Block-Zeichen (20 Schritte = 5% pro Schritt)
         bar = int(result["confidence"] * 20) * "█" + int((1 - result["confidence"]) * 20) * "░"
         changed = result["answer"].strip() != tc["answer"].strip()
         print(f"\n[{tc['label']}]")

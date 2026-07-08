@@ -6,8 +6,8 @@ Misst wie viele absichtlich falsche Antworten (Halluzinationen)
 der Validator erkennt und korrigiert.
 
 Metriken:
-- Catch Rate:         Anteil der Halluzinationen bei denen confidence < 0.6
-- Correction Rate:    Anteil bei denen die Antwort tatsächlich verändert wurde
+- Catch Rate:          Anteil der Halluzinationen bei denen confidence < 0.6
+- Correction Rate:     Anteil bei denen die Antwort tatsächlich verändert wurde
 - False Positive Rate: Anteil korrekter Antworten die fälschlich mit confidence < 0.6 markiert wurden
 
 Aufruf: python data/evaluate_validator.py
@@ -19,15 +19,16 @@ import sys
 from dotenv import load_dotenv
 load_dotenv()
 
+# Projekt-Root in den Suchpfad aufnehmen damit agents/ importiert werden kann
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from agents.agent_validator import validator_agent
 
 # ─────────────────────────────────────────────
 # TESTDATENSATZ
-# type: "hallucination" — absichtlich falsche Antwort
-# type: "control"       — korrekte Antwort, darf NICHT markiert werden
-# type: "out_of_domain" — außerhalb der Fußball-Domäne
+# type: "hallucination" — absichtlich falsche Antwort, soll erkannt werden
+# type: "control"       — korrekte Antwort, darf NICHT als Halluzination markiert werden
+# type: "out_of_domain" — Frage außerhalb der Fußball-Domäne, soll ebenfalls erkannt werden
 # ─────────────────────────────────────────────
 TEST_CASES = [
     # ── Halluzinationen ──────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ TEST_CASES = [
     },
 
     # ── Kontrollfälle (korrekte Antworten) ──────────────────────────────────
+    # Diese Fälle sollen NICHT als Halluzination erkannt werden (False Positive vermeiden)
     {
         "type": "control",
         "label": "Korrekte Bayern-Gründung",
@@ -154,6 +156,7 @@ TEST_CASES = [
     },
 
     # ── Out-of-domain ────────────────────────────────────────────────────────
+    # Fragen außerhalb der Fußball-Domäne sollen erkannt und niedrig bewertet werden
     {
         "type": "out_of_domain",
         "label": "Formel-1-Frage",
@@ -163,8 +166,10 @@ TEST_CASES = [
     },
 ]
 
-CATCH_THRESHOLD = 0.6  # confidence unter diesem Wert = Halluzination erkannt
+# Schwellenwert: confidence unter diesem Wert gilt als "Halluzination erkannt"
+CATCH_THRESHOLD = 0.6
 
+# Leerer Basis-State ohne SQL-Daten — Validator läuft rein über RAG und Heuristiken
 EMPTY_BASE = {
     "route": "", "route_reason": "", "sql": "", "sql_result": "",
     "sub_answers": [], "steps": [], "active_agent": "", "confidence": 0.0,
@@ -172,12 +177,17 @@ EMPTY_BASE = {
 
 
 def _ground_truth_overlap(answer_out: str, ground_truth: str) -> bool:
-    """Einfache Heuristik: enthält die korrigierte Antwort zentrale Begriffe aus ground_truth?"""
+    """Einfache Heuristik: enthält die korrigierte Antwort zentrale Begriffe aus ground_truth?
+
+    Gibt True zurück wenn mindestens 30% der bedeutungstragenden Wörter (>= 4 Zeichen)
+    aus dem Ground Truth auch in der validierten Antwort vorkommen.
+    """
     gt_words = set(w.lower() for w in ground_truth.split() if len(w) >= 4)
     ans_words = set(w.lower() for w in answer_out.split() if len(w) >= 4)
     if not gt_words:
         return False
     overlap = gt_words & ans_words
+    # 30%-Schwelle: lockere Übereinstimmung reicht, da Synonyme und Umformulierungen vorkommen
     return len(overlap) / len(gt_words) >= 0.3
 
 
@@ -187,12 +197,15 @@ if __name__ == "__main__":
     results = []
 
     for tc in TEST_CASES:
+        # State ohne SQL-Daten aufbauen → Validator nutzt nur RAG und Heuristiken
         state = {**EMPTY_BASE, "question": tc["question"], "answer": tc["answer_in"]}
         result = validator_agent(state)
 
         confidence = result["confidence"]
         answer_out = result["answer"]
+        # Antwort wurde verändert wenn der Validator eine Korrektur vorgenommen hat
         answer_changed = answer_out.strip() != tc["answer_in"].strip()
+        # Erkannt = confidence unter dem Schwellenwert
         caught = confidence < CATCH_THRESHOLD
         gt_overlap = _ground_truth_overlap(answer_out, tc["ground_truth"])
 
@@ -205,8 +218,15 @@ if __name__ == "__main__":
             "gt_overlap":     gt_overlap,
         })
 
+        # Balken aus 20 Block-Zeichen (jeder Block = 5% Confidence)
         bar = int(confidence * 20) * "█" + int((1 - confidence) * 20) * "░"
 
+        # Bewertungslogik je nach Test-Typ unterschiedlich:
+        # - hallucination + caught       = korrekt erkannt → ERKANNT
+        # - hallucination + not caught   = Fehler des Validators → DURCHGERUTSCHT
+        # - control + not caught         = korrekt behalten → OK
+        # - control + caught             = fälschlich markiert → FALSE POSITIVE
+        # - out_of_domain + caught       = korrekt abgelehnt → ERKANNT
         if tc["type"] == "hallucination":
             flag = "ERKANNT" if caught else "DURCHGERUTSCHT"
         elif tc["type"] == "control":
@@ -217,15 +237,19 @@ if __name__ == "__main__":
         print(f"  [{flag:>14}] {bar} {confidence:.0%}  {tc['label']}")
 
     # ─────────────────────────────────────────────
-    # METRIKEN
+    # METRIKEN — Zusammenfassung nach Test-Typ
     # ─────────────────────────────────────────────
     hall_results = [r for r in results if r["type"] == "hallucination"]
     ctrl_results  = [r for r in results if r["type"] == "control"]
     ood_results   = [r for r in results if r["type"] == "out_of_domain"]
 
+    # Catch Rate: Wie viele Halluzinationen wurden erkannt?
     catch_rate       = sum(r["caught"] for r in hall_results) / len(hall_results) if hall_results else 0.0
+    # Correction Rate: Wie oft wurde die Antwort tatsächlich verändert (nicht nur markiert)?
     correction_rate  = sum(r["answer_changed"] for r in hall_results) / len(hall_results) if hall_results else 0.0
+    # False Positive Rate: Wie oft wurden korrekte Antworten fälschlich markiert?
     false_pos_rate   = sum(r["caught"] for r in ctrl_results) / len(ctrl_results) if ctrl_results else 0.0
+    # Out-of-domain Catch Rate: Wie oft wurden Off-topic-Fragen erkannt?
     ood_catch_rate   = sum(r["caught"] for r in ood_results) / len(ood_results) if ood_results else 0.0
 
     print("\n" + "=" * 70)
@@ -240,6 +264,7 @@ if __name__ == "__main__":
     print(f"False Positive Rate:        {false_pos_rate:.1%}  — korrekte Antworten fälschlich markiert")
     print(f"Out-of-Domain Catch Rate:   {ood_catch_rate:.1%}  — Off-topic erkannt")
 
+    # Detailansicht für Fehlerfälle zur einfacheren Fehleranalyse
     missed = [r for r in hall_results if not r["caught"]]
     if missed:
         print(f"\nDurchgerutschte Halluzinationen ({len(missed)}):")
@@ -251,4 +276,3 @@ if __name__ == "__main__":
         print(f"\nFalse Positives ({len(fp_cases)}):")
         for r in fp_cases:
             print(f"  [{r['confidence']:.0%}] {r['label']}: {r['answer_in'][:60]}")
-
