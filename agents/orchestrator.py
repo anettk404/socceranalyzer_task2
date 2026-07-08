@@ -1,5 +1,6 @@
 """
 LangGraph Orchestrator — Supervisor-Pattern.
+Autor: Selma Elezovic
 
 Graph:
   START → supervisor → [openligadb_agent | statsbomb_agent | combined_agent | rag_agent] → supervisor (loop)
@@ -25,6 +26,7 @@ def question_rewriter(state: GraphState) -> GraphState:
 
     Aus 'was weißt du über den Verein?' + History Bayern → 'Was weißt du über Bayern München?'
     Konkrete Fragen werden unverändert durchgereicht.
+    Ohne chat_history wird der State direkt weitergegeben (kein LLM-Call nötig).
     """
     history = state.get("chat_history", "")
     if not history:
@@ -87,7 +89,12 @@ _EMPTY_INDICATORS = [
 ]
 
 def _all_empty(sub_answers: list[str]) -> bool:
-    """Prüft ob alle Teilergebnisse inhaltsleer sind."""
+    """Prüft ob alle Teilergebnisse inhaltsleer sind.
+
+    Wenn kein Agent verwertbare Daten gefunden hat, gibt der Aggregator
+    eine vordefinierte Fallback-Antwort zurück statt das LLM aufzurufen —
+    verhindert halluzinierte Antworten bei fehlender Datenbasis.
+    """
     if not sub_answers:
         return True
     for answer in sub_answers:
@@ -115,15 +122,9 @@ def aggregator(state: GraphState) -> GraphState:
 
     if len(state["sub_answers"]) == 1:
         answer = state["sub_answers"][0].split("] ", 1)[-1]
-        if not history_block:
-            return {**state, "answer": answer}
-        # Auch bei einzelner Quelle den Kontext nutzen um Wiederholungen zu vermeiden
-        messages = [
-            SystemMessage(content=PROMPTS["aggregator"]["system"]),
-            HumanMessage(content=f"{history_block}Frage: {state['question']}\n\nTeilergebnis:\n{answer}"),
-        ]
-        response = llm.invoke(messages)
-        return {**state, "answer": response.content.strip()}
+        # Bei einzelnem Teilergebnis direkt zurückgeben — kein LLM-Call nötig,
+        # verhindert dass GPT eigene Trainingsdaten über die Quelldaten stellt.
+        return {**state, "answer": answer}
 
     sub_answers_text = "\n\n".join(state["sub_answers"])
     messages = [

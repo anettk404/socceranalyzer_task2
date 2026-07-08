@@ -1,4 +1,12 @@
-"""Mapping and normalization helpers for stats services."""
+"""
+Titel: Statistik-Normalisierung
+Beschreibung: Dieses Modul vereinheitlicht Team- und Saisonnamen zwischen UI,
+              OpenLigaDB und StatsBomb und unterstützt die Teamauflösung per Fuzzy-Matching.
+Wichtige Inhalte: Team-Normalisierung, Saison-Normalisierung, Kandidatenvergleich.
+Autorin: Annette Kufner
+
+Hinweis: Dieses Skript wurde mithilfe von Gemini, Claude und Codex erstellt.
+"""
 
 import difflib
 import sqlite3
@@ -7,6 +15,7 @@ import unicodedata
 from services.stats_constants import TEAM_NAME_OVERRIDES, UI_TO_OPENLIGA_TEAM
 
 
+# Die UI liefert eigene Namen, die hier auf Datenbankwerte abgebildet werden.
 def normalize_openliga_team_name(team_name: str | None) -> str | None:
     if not team_name or team_name == "Alle Teams":
         return None
@@ -55,6 +64,8 @@ def _normalize_name_for_matching(value: str) -> str:
     return " ".join(normalized.split())
 
 
+# Wenn ein Teamname nicht direkt gefunden wird, versuchen wir den passendsten DB-
+# Kandidaten anhand von Ähnlichkeit und Token-Überlappung zu ermitteln.
 def resolve_statsbomb_team_name(
     conn: sqlite3.Connection,
     team_name: str,

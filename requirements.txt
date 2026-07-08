@@ -30,3 +30,4 @@ spacy>=3.8.14
 plotly>=6.8.0
 playwright>=1.60.0
 nltk>=3.9.1
+vaderSentiment>=3.3.2

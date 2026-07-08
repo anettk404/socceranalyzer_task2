@@ -1,3 +1,6 @@
+# Autor: Selma Elezovic
+# Agent für Tabellen- und Matchdaten aus der OpenLigaDB (Bundesliga & weitere Ligen).
+
 import json
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -7,8 +10,14 @@ from .db import run_query, SCHEMA
 
 
 def openligadb_agent(state: GraphState) -> GraphState:
-    """Generiert SQL auf openliga_* Tabellen und formuliert eine Antwort."""
+    """Generiert SQL auf openliga_* Tabellen und formuliert eine Antwort.
+
+    Zwei LLM-Calls: erster generiert das SQL-Query, zweiter formuliert
+    das Datenbankergebnis als natürlichsprachige Antwort.
+    """
     history_block = f"Gesprächskontext:\n{state.get('chat_history', '')}\n\n" if state.get("chat_history") else ""
+
+    # 1. LLM-Call: SQL-Query generieren basierend auf Schema und Frage
     sql_prompt = f"""Du hast Zugriff auf folgende SQLite-Tabellen:
 
 {SCHEMA}
@@ -20,14 +29,17 @@ Antworte ausschließlich mit dem SQL-Query, ohne Erklärungen oder Markdown.
 {history_block}Frage: {state['question']}"""
 
     sql_response = llm.invoke([HumanMessage(content=sql_prompt)])
+    # Markdown-Codeblöcke entfernen falls das LLM sie trotzdem einfügt
     sql = sql_response.content.strip().removeprefix("```sql").removesuffix("```").strip()
 
+    # SQL ausführen — Fehler werden als Text weitergegeben, nicht als Exception
     try:
         rows = run_query(sql)
         db_result = json.dumps(rows, ensure_ascii=False)
     except Exception as e:
         db_result = f"SQL-Fehler: {e}"
 
+    # 2. LLM-Call: Datenbankergebnis als natürlichsprachige Antwort formulieren
     answer_messages = [
         SystemMessage(content=PROMPTS["openligadb"]["system"]),
         HumanMessage(content=f"Frage: {state['question']}\n\nDatenbankErgebnis:\n{db_result}"),

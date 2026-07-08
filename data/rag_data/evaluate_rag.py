@@ -49,7 +49,16 @@ TEST_CASES = [
         "question": "Wann wurde der FC Barcelona gegründet?",
         "ground_truth": "Der FC Barcelona wurde am 29. November 1899 von Joan Gamper gegründet.",
     },
-    
+    # Edge Case: zeitkritischer Fakt — testet ob RAG aktuellen Trainer liefert statt GPT-Wissen
+    {
+        "question": "Wer ist der aktuelle Trainer von FC Bayern München?",
+        "ground_truth": "Der aktuelle Trainer des FC Bayern München ist Vincent Kompany.",
+    },
+    # Edge Case: Verein nicht in Pinecone — testet ob RAG sauber ablehnt oder halluziniert
+    {
+        "question": "Was weißt du über den Al-Hilal FC aus Saudi-Arabien?",
+        "ground_truth": "Keine relevanten Daten gefunden — Verein nicht in der Wissensdatenbank.",
+    },
 ]
 
 

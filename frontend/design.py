@@ -3,11 +3,17 @@
 # -----------------------------------------------
 # Authorin: Annette Kufner
 
+# Hinweis: Dieses Skript wurde mithilfe von Gemini und Claude entwickelt.
+
 # 
 """
 Aufbau des Streamlit-Design für den GSA -nur Design, kein Inhalt
 
 Starten aus dem Ordner Frontend mit "uv run streamlit run design.py"
+
+Für das Deployment über den Streamlit-Cloud-Server (https://socceranalyzer.streamlit.app/wird diese Datei über Github mit Streamlit Cloud verbunden.
+
+
 """
 
 #-------------------------------------------------
@@ -120,6 +126,35 @@ st.set_page_config(
 
 st.markdown("""
 <style>
+    :root {
+        --gsa-heading-font: "Segoe UI", "Segoe UI Variable Text", Arial, sans-serif;
+    }
+    h1, h2, h3, h4, h5, h6,
+    .app-focus-title,
+    .app-section-title,
+    .app-section-subtitle {
+        font-family: var(--gsa-heading-font);
+    }
+    .app-focus-title {
+        font-size: 1.18rem;
+        font-weight: 700;
+        line-height: 1.08;
+        letter-spacing: -0.01em;
+        color: #2d5a27;
+    }
+    .app-section-title {
+        font-size: 1.02rem;
+        font-weight: 700;
+        line-height: 1.08;
+        letter-spacing: -0.01em;
+        color: #1f2937;
+    }
+    .app-section-subtitle {
+        font-size: 0.78rem;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: 0.02em;
+    }
     [data-testid="stSidebar"], [data-testid="stSidebarNav"], [data-testid="collapsedControl"] {
         display: none !important;
     }

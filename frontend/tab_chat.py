@@ -1,5 +1,9 @@
 # -----------------------------------------------
 # tab_chat.py
+# Autor: Selma Elezovic
+# Streamlit Chat-Interface: nimmt Nutzerfragen entgegen, streamt den
+# Agenten-Durchlauf mit Live-Fortschrittsanzeige und zeigt Antwort,
+# Confidence-Badge und SQL-Rohdaten an.
 # -----------------------------------------------
 
 import sys
@@ -69,6 +73,7 @@ AGENT_STEPS = [
 
 
 def _build_history_string(messages: list) -> str:
+    # Nur letzte 3 Runden um das Token-Limit von gpt-4o-mini nicht zu überschreiten
     pairs = []
     i = 0
     while i < len(messages) - 1:
@@ -146,7 +151,7 @@ def render_chat_tab():
         st.markdown("""
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
             <div style="display:flex;align-items:center;gap:0.6rem">
-                <strong>GSA Chat-Analyse</strong>
+                <span class="app-focus-title" style="color:#0f172a;">GSA Chat-Analyse</span>
                 <span style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;
                              padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600">
                     Multi-Agent aktiv
@@ -264,6 +269,8 @@ def render_chat_tab():
                     if node not in completed:
                         completed.append(node)
 
+                    # Supervisor kann mehrfach aufgerufen werden (iterativer Loop),
+                    # next_idx zeigt immer den nächsten Step in der fixen Anzeigereihenfolge.
                     node_order = [k for k, _ in AGENT_STEPS]
                     next_idx = node_order.index(node) + 1 if node in node_order else -1
                     next_node = node_order[next_idx] if next_idx < len(node_order) else ""

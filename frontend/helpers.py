@@ -1,19 +1,12 @@
-# -----------------------------------------------------
-# helpers.py
-# -----------------------------------------------------
-
 """
-Hilfsfunktionen für die Streamlit-App
+Titel: Streamlit-Hilfsfunktionen
+Beschreibung: Dieses Modul bündelt die Hilfsfunktionen für Wortwolken, Quellen-Tags,
+              Confidence-Anzeigen und globale UI-Initialisierung in der Streamlit-App.
+Wichtige Inhalte: Wortwolken-Visualisierung, Team-Normalisierung, Session-State,
+                  CSS-Injektion.
+Autorin: Annette Kufner
 
-Enthält alle Funktionen zur Datenverarbeitung und Visualisierung.
-Die Funktionen werden in app.py importiert und aufgerufen.
-
-Funktionen:
-    - zeige_wortwolke(): Erzeugt und zeigt eine Wortwolke
-    - render_source_tags(): Zeigt farbige Quellen-Tags
-    - render_confidence(): Zeigt Confidence-Balken
-    - init_session_state(): Initialisiert Session-State
-    - inject_css(): Globales CSS
+Hinweis: Dieses Skript wurde mithilfe von Gemini, Claude und Codex erstellt.
 """
 
 from __future__ import annotations
@@ -52,6 +45,7 @@ _WORDCLOUD_TEAM_ALIASES = {
 }
 
 
+# Teamnamen werden vereinheitlicht, damit Wortwolken und UI-Auswahl dieselben Teams finden.
 def _normalize_wordcloud_team_name(team_name: str) -> str:
     normalized = unicodedata.normalize("NFKD", team_name or "")
     normalized = normalized.encode("ascii", "ignore").decode("ascii").lower()
@@ -64,6 +58,7 @@ def _normalize_wordcloud_team_name(team_name: str) -> str:
 
 def load_wordcloud_frequencies(team_name: str = "", data_path: str | Path | None = None) -> dict:
     """Lädt die Wortwolken-Häufigkeiten für ein Team aus der JSON-Datei."""
+    # Die Wortwolken-Daten liegen als JSON im data-Ordner und werden hier gefiltert.
     resolved_path = Path(data_path) if data_path else ROOT_DIR / "data" / "haeufigkeiten_wortwolken.json"
 
     if not resolved_path.exists():
@@ -95,6 +90,7 @@ def zeige_wortwolke(haeufigkeiten: dict, titel: str = "") -> None:
     Falls das Paket wordcloud nicht verfügbar ist, wird ein einfacher
     visueller Fallback mit Matplotlib dargestellt.
     """
+    # Erst der normale WordCloud-Pfad, danach ein einfacher Plotly-freier Fallback.
     if not haeufigkeiten:
         st.info("Keine Wortwolken-Daten verfügbar.")
         return
@@ -167,6 +163,7 @@ def zeige_wortwolke(haeufigkeiten: dict, titel: str = "") -> None:
 
 def render_source_tags(quellen: list):
     """Zeigt farbige Quellen-Tags unter einer Antwort"""
+    # Die Quellen-Tags werden als kleine Badges in die UI geschrieben.
     st.markdown(
         " ".join([
             f'<span class="source-tag tag-{q.lower()}">{q}</span>'
@@ -175,19 +172,25 @@ def render_source_tags(quellen: list):
         unsafe_allow_html=True
     )
 
+
 def render_confidence(wert: float):
     """Zeigt Confidence-Balken"""
+    # Der Confidence-Wert wird direkt als Streamlit-Progressbar angezeigt.
     st.progress(wert, text=f"Confidence: {int(wert*100)}%")
+
 
 def init_session_state():
     """Initialisiert alle Session-State Variablen"""
+    # Hier werden die Session-Keys angelegt, die mehrere Tabs gemeinsam verwenden.
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "beispiel_frage" not in st.session_state:
         st.session_state.beispiel_frage = None
 
+
 def inject_css():
     """Globales CSS für Source-Tags und Styling"""
+    # Globale Styles für die kleinen Quellen-Badges und deren Farbvarianten.
     st.markdown("""
     <style>
         .source-tag {
