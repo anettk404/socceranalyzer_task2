@@ -20,6 +20,7 @@ load_dotenv()
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from agents.agent_rag import _retrieve
+from agents.shared import PROMPTS
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -130,8 +131,8 @@ if __name__ == "__main__":
         context_chunks = [c for c in raw_context.split("\n\n---\n\n") if c.strip()]
 
         response = llm.invoke([
-            SystemMessage(content="Du bist ein Fußball-Experte. Beantworte die Frage auf Basis der Wikipedia-Ausschnitte auf Deutsch."),
-            HumanMessage(content=f"Frage: {question}\n\nKontext:\n{raw_context}"),
+            SystemMessage(content=PROMPTS["rag"]["system"]),
+            HumanMessage(content=f"Frage: {question}\n\nRelevante Wikipedia-Ausschnitte:\n{raw_context}"),
         ])
         answer = response.content.strip()
 
