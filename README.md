@@ -7,17 +7,10 @@ GenSoccerAnalyzer ist eine Streamlit-App zur Analyse von Fussballdaten mit mehre
 - Wikipedia: Wortwolken und Sentiment
 - Multi-Agent-Orchestrierung mit LangGraph
 
-## Wortwolke (Bild-Platzhalter)
-
-Lege dein Bild z. B. unter diesem Pfad ab:
-
-- docs/images/wortwolke.png
-
-Dann bleibt dieser Platzhalter sofort nutzbar:
+## Wortwolke (Beispiel für eine Visualisierung im Projekt)
 
 ![Wortwolke Platzhalter](docs/images/wortwolke.png)
 
-Hinweis: Solange die Datei noch nicht existiert, zeigt GitHub nur den Alt-Text an.
 
 ## Projektstruktur (Auszug)
 
