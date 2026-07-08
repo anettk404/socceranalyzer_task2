@@ -117,7 +117,7 @@ def fetch_plaintext(title: str, retries: int = 5) -> dict | None:
             r = requests.get(WIKIPEDIA_API, params=params, headers=HEADERS, timeout=10)
             if r.status_code == 429:
                 wait = 15 * (attempt + 1)  # 15s → 30s → 45s → 60s → 75s
-                print(f"  ⏳ Rate limit Fließtext – warte {wait}s...")
+                print(f"Rate limit Fließtext – warte {wait}s...")
                 time.sleep(wait)
                 continue
             r.raise_for_status()
@@ -125,15 +125,15 @@ def fetch_plaintext(title: str, retries: int = 5) -> dict | None:
             pages = data["query"]["pages"]
             page  = next(iter(pages.values()))
             if "missing" in page:
-                print(f"  ⚠️  Seite nicht gefunden: '{title}'")
+                print(f"Seite nicht gefunden: '{title}'")
                 return None
             text = page.get("extract", "").strip()
             if not text:
-                print(f"  ⚠️  Kein Text für: '{title}'")
+                print(f"Kein Text für: '{title}'")
                 return None
             return {"wikipedia_title": page["title"], "text_en": text}
         except Exception as e:
-            print(f"  ❌ Fehler Fließtext '{title}' (Versuch {attempt+1}/{retries}): {e}")
+            print(f"Fehler Fließtext '{title}' (Versuch {attempt+1}/{retries}): {e}")
             if attempt < retries - 1:
                 time.sleep(5)
     return None
@@ -150,13 +150,13 @@ def fetch_html(title: str, retries: int = 5) -> BeautifulSoup | None:
             r = requests.get(url, headers=HEADERS, timeout=15)
             if r.status_code == 429:
                 wait = 15 * (attempt + 1)  # 15s → 30s → 45s → 60s → 75s
-                print(f"  ⏳ Rate limit HTML – warte {wait}s...")
+                print(f"Rate limit HTML – warte {wait}s...")
                 time.sleep(wait)
                 continue
             r.raise_for_status()
             return BeautifulSoup(r.text, "html.parser")
         except Exception as e:
-            print(f"  ❌ Fehler HTML '{title}' (Versuch {attempt+1}/{retries}): {e}")
+            print(f"Fehler HTML '{title}' (Versuch {attempt+1}/{retries}): {e}")
             if attempt < retries - 1:
                 time.sleep(8)
     return None
@@ -228,10 +228,6 @@ def infobox_to_text(infobox: dict, team: str) -> str | None:
         display_key = INFOBOX_FIELD_SYNONYMS.get(key, key)
         lines.append(f"  {display_key}: {value}")
     return "\n".join(lines)
-
-
-
-
 
 def parse_html_table(table) -> list[dict]:
     """
@@ -418,7 +414,7 @@ def collect_all_articles(
         with open(output_path, "r", encoding="utf-8") as f:
             articles = json.load(f)
         already_done = {a["wikipedia_title"] for a in articles}
-        print(f"📂 Bereits {len(articles)} Artikel vorhanden – wird fortgesetzt.\n")
+        print(f"Bereits {len(articles)} Artikel vorhanden – wird fortgesetzt.\n")
     else:
         articles     = []
         already_done = set()
@@ -427,17 +423,17 @@ def collect_all_articles(
 
     with tqdm(total=total_teams, desc="Teams gesamt") as pbar:
         for liga, teams in TEAMS.items():
-            print(f"\n🏟️  Liga: {liga}")
+            print(f"\nLiga: {liga}")
             for team in teams:
                 pbar.set_postfix({"team": team[:30]})
 
                 if any(a["team"] == team for a in articles):
-                    print(f"  ⏭️  Bereits vorhanden: {team}")
+                    print(f"Bereits vorhanden: {team}")
                     pbar.update(1)
                     continue
 
                 # ── Fließtext ──────────────────────────
-                print(f"  📄 Hole Fließtext: {team}")
+                print(f"Hole Fließtext: {team}")
                 article = fetch_plaintext(team)
                 if article is None:
                     pbar.update(1)
@@ -446,7 +442,7 @@ def collect_all_articles(
                 time.sleep(2)
 
                 # ── HTML für Infobox + Tabellen ────────
-                print(f"  🌐 Hole HTML: {team}")
+                print(f"Hole HTML: {team}")
                 soup = fetch_html(team)
 
                 if soup is None:
@@ -455,13 +451,13 @@ def collect_all_articles(
                     continue  # nicht speichern!
 
                 infobox_data = extract_infobox(soup, team)
-                print(f"    ✅ Infobox: {len(infobox_data)} Felder")
+                print(f"Infobox: {len(infobox_data)} Felder")
 
                 squad_data = find_section_content(soup, SECTION_CURRENT_SQUAD)
-                print(f"    ✅ Kader: {len(squad_data)} Einträge")
+                print(f"Kader: {len(squad_data)} Einträge")
 
                 honours_data = find_section_content(soup, SECTION_HONOURS)
-                print(f"    ✅ Erfolge: {len(honours_data)} Einträge")
+                print(f"Erfolge: {len(honours_data)} Einträge")
 
                 time.sleep(2)
 
@@ -504,7 +500,7 @@ def collect_all_articles(
                 time.sleep(6)   # höfliche Pause zwischen Teams
                 pbar.update(1)
 
-    print(f"\n✅ Fertig! {len(articles)} Artikel in '{output_path}' gespeichert.")
+    print(f"\nFertig! {len(articles)} Artikel in '{output_path}' gespeichert.")
     return articles
 
 
@@ -527,7 +523,7 @@ def collect_league_articles(
         with open(output_path, "r", encoding="utf-8") as f:
             league_articles = json.load(f)
         already_done = {a["liga"] for a in league_articles}
-        print(f"📂 Bereits {len(league_articles)} Liga-Artikel vorhanden – wird fortgesetzt.\n")
+        print(f"Bereits {len(league_articles)} Liga-Artikel vorhanden – wird fortgesetzt.\n")
     else:
         league_articles = []
         already_done = set()
@@ -537,12 +533,12 @@ def collect_league_articles(
             pbar.set_postfix({"liga": liga})
 
             if liga in already_done:
-                print(f"  ⏭️  Bereits vorhanden: {liga}")
+                print(f"Bereits vorhanden: {liga}")
                 pbar.update(1)
                 continue
 
             # ── Fließtext ──────────────────────────
-            print(f"\n📄 Hole Fließtext: {liga} ({wiki_title})")
+            print(f"\nHole Fließtext: {liga} ({wiki_title})")
             article = fetch_plaintext(wiki_title)
             if article is None:
                 pbar.update(1)
@@ -551,22 +547,22 @@ def collect_league_articles(
             time.sleep(2)
 
             # ── HTML für Infobox + Erfolge/Rekorde ─
-            print(f"  🌐 Hole HTML: {liga}")
+            print(f"Hole HTML: {liga}")
             soup = fetch_html(wiki_title)
 
             if soup is None:
-                print(f"  ❌ HTML fehlgeschlagen – Liga wird beim nächsten Start erneut versucht.")
+                print(f"HTML fehlgeschlagen – Liga wird beim nächsten Start erneut versucht.")
                 pbar.update(1)
                 continue
 
             infobox_data = extract_infobox(soup, liga)
-            print(f"    ✅ Infobox: {len(infobox_data)} Felder")
+            print(f"Infobox: {len(infobox_data)} Felder")
 
             # Bei Liga-Artikeln heißen Rekorde/Titel-Sektionen oft anders als bei Vereinen
             records_data = find_section_content(
                 soup, ["most titles", "champions", "records", "winners"]
             )
-            print(f"    ✅ Rekorde/Titel: {len(records_data)} Einträge")
+            print(f"Rekorde/Titel: {len(records_data)} Einträge")
 
             time.sleep(2)
 
@@ -601,7 +597,7 @@ def collect_league_articles(
             time.sleep(6)
             pbar.update(1)
 
-    print(f"\n✅ Fertig! {len(league_articles)} Liga-Artikel in '{output_path}' gespeichert.")
+    print(f"\nFertig! {len(league_articles)} Liga-Artikel in '{output_path}' gespeichert.")
     return league_articles
 
 
@@ -615,14 +611,14 @@ if __name__ == "__main__":
     )
 
     # Kurze Übersicht
-    print("\n📊 Übersicht Vereine:")
+    print("\nÜbersicht Vereine:")
     from collections import Counter
     liga_count = Counter(a["liga"] for a in articles)
     for liga, count in liga_count.items():
         print(f"  {liga}: {count} Teams")
 
     # Vollständigkeit der neuen Felder
-    print("\n📊 Vollständigkeit der neuen Felder (Vereine):")
+    print("\nVollständigkeit der neuen Felder (Vereine):")
     has_infobox  = sum(1 for a in articles if a.get("infobox"))
     has_kader    = sum(1 for a in articles if a.get("tabellen", {}).get("kader"))
     has_erfolge  = sum(1 for a in articles if a.get("tabellen", {}).get("erfolge"))
@@ -639,7 +635,7 @@ if __name__ == "__main__":
         output_path="data/wikipedia_leagues.json",
     )
 
-    print("\n📊 Vollständigkeit der neuen Felder (Ligen):")
+    print("\nVollständigkeit der neuen Felder (Ligen):")
     has_infobox_l = sum(1 for a in league_articles if a.get("infobox"))
     has_rekorde   = sum(1 for a in league_articles if a.get("tabellen", {}).get("rekorde"))
     total_l       = len(league_articles)
