@@ -1,5 +1,7 @@
 """
 RAG Evaluation ohne ragas-Abhängigkeit
+
+Autorin: Susanne Schmid
 =======================================
 Bewertet die RAG-Pipeline (Pinecone + GPT) anhand von Testfragen.
 
@@ -129,6 +131,10 @@ if __name__ == "__main__":
 
         raw_context = _retrieve(question)
         context_chunks = [c for c in raw_context.split("\n\n---\n\n") if c.strip()]
+        print(f"  → {len(context_chunks)} Chunks abgerufen")
+        for i, chunk in enumerate(context_chunks[:3]):
+            print(f"  [{i+1}] {chunk[:200].strip()}")
+        print()
 
         response = llm.invoke([
             SystemMessage(content=PROMPTS["rag"]["system"]),

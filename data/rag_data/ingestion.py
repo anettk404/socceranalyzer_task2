@@ -60,7 +60,7 @@ def setup_embedding() -> OpenAIEmbedding:
     Settings.embed_model   = embed_model
     Settings.chunk_size    = CHUNK_SIZE
     Settings.chunk_overlap = CHUNK_OVERLAP
-    print(f"✅ Embedding-Modell: {EMBEDDING_MODEL} ({EMBEDDING_DIM} Dimensionen)")
+    print(f"Embedding-Modell: {EMBEDDING_MODEL} ({EMBEDDING_DIM} Dimensionen)")
     return embed_model
 
 
@@ -72,16 +72,16 @@ def setup_pinecone():
     existing = [idx.name for idx in pc.list_indexes()]
 
     if INDEX_NAME not in existing:
-        print(f"🆕 Erstelle Pinecone Index '{INDEX_NAME}'...")
+        print(f"Erstelle Pinecone Index '{INDEX_NAME}'...")
         pc.create_index(
             name=INDEX_NAME,
             dimension=EMBEDDING_DIM,
             metric="cosine",
             spec=ServerlessSpec(cloud="aws", region="us-east-1"),
         )
-        print(f"✅ Index '{INDEX_NAME}' erstellt.")
+        print(f"Index '{INDEX_NAME}' erstellt.")
     else:
-        print(f"✅ Index '{INDEX_NAME}' bereits vorhanden – wird verwendet.")
+        print(f"Index '{INDEX_NAME}' bereits vorhanden – wird verwendet.")
 
     return pc.Index(INDEX_NAME)
 
@@ -221,19 +221,19 @@ def build_structured_chunks(article: dict) -> list[dict]:
 # ─────────────────────────────────────────────
 def load_articles() -> tuple[list[dict], list[dict]]:
     """Lädt Vereins- und Liga-Artikel getrennt, da Liga-Artikel kein 'team' haben."""
-    print(f"\n📂 Lade Vereinsartikel aus '{TEAMS_FILE}'...")
+    print(f"\nLade Vereinsartikel aus '{TEAMS_FILE}'...")
     with open(TEAMS_FILE, "r", encoding="utf-8") as f:
         teams = json.load(f)
-    print(f"✅ {len(teams)} Vereinsartikel geladen.")
+    print(f"{len(teams)} Vereinsartikel geladen.")
 
     leagues = []
     if Path(LEAGUES_FILE).exists():
-        print(f"📂 Lade Liga-Artikel aus '{LEAGUES_FILE}'...")
+        print(f"Lade Liga-Artikel aus '{LEAGUES_FILE}'...")
         with open(LEAGUES_FILE, "r", encoding="utf-8") as f:
             leagues = json.load(f)
-        print(f"✅ {len(leagues)} Liga-Artikel geladen.")
+        print(f"{len(leagues)} Liga-Artikel geladen.")
     else:
-        print(f"⚠️  '{LEAGUES_FILE}' nicht gefunden – Liga-Artikel werden übersprungen.")
+        print(f"'{LEAGUES_FILE}' nicht gefunden – Liga-Artikel werden übersprungen.")
 
     return teams, leagues
 
@@ -253,7 +253,7 @@ def build_all_chunks(teams: list[dict], leagues: list[dict]) -> list[dict]:
     all_articles = teams + leagues
     all_chunks = []
 
-    print(f"\n✂️  Baue Chunks für {len(all_articles)} Artikel...")
+    print(f"\nBaue Chunks für {len(all_articles)} Artikel...")
     for article in tqdm(all_articles, desc="Artikel verarbeiten"):
         # 1. Strukturierte Chunks (infobox, kader, erfolge)
         all_chunks.extend(build_structured_chunks(article))
@@ -286,7 +286,7 @@ def build_all_chunks(teams: list[dict], leagues: list[dict]) -> list[dict]:
 
     n_structured = sum(1 for c in all_chunks if c["metadata"]["chunk_type"] != "text")
     n_text       = sum(1 for c in all_chunks if c["metadata"]["chunk_type"] == "text")
-    print(f"✅ {len(all_chunks)} Chunks gesamt "
+    print(f"{len(all_chunks)} Chunks gesamt "
           f"({n_structured} strukturiert: infobox/kader/erfolge, {n_text} Fließtext)")
 
     return all_chunks
@@ -304,16 +304,16 @@ def embed_and_upload(chunks: list[dict], pinecone_index, embed_model: OpenAIEmbe
     existing_count = stats["total_vector_count"]
 
     if existing_count > 0:
-        print(f"\n⚠️  Index enthält bereits {existing_count} Vektoren – Upload übersprungen.")
+        print(f"\nIndex enthält bereits {existing_count} Vektoren – Upload übersprungen.")
         print("   Zum Neu-Befüllen: oben 'pinecone_index.delete(delete_all=True)' einkommentieren.")
         return
 
-    print(f"\n🚀 Erstelle Embeddings und lade {len(chunks)} Chunks in Pinecone hoch...")
+    print(f"\nErstelle Embeddings und lade {len(chunks)} Chunks in Pinecone hoch...")
 
     vectors = []
     texts = [c["text"] for c in chunks]
 
-    print("  📐 Erstelle Embeddings via OpenAI...")
+    print("Erstelle Embeddings via OpenAI...")
     for i in tqdm(range(0, len(texts), BATCH_SIZE), desc="Embedding Batches"):
         batch_texts = texts[i:i + BATCH_SIZE]
         batch_chunks = chunks[i:i + BATCH_SIZE]
@@ -327,19 +327,19 @@ def embed_and_upload(chunks: list[dict], pinecone_index, embed_model: OpenAIEmbe
                 "metadata": {**chunk["metadata"], "text": chunk["text"]},
             })
 
-    print(f"  📤 Lade {len(vectors)} Vektoren in Pinecone hoch...")
+    print(f"Lade {len(vectors)} Vektoren in Pinecone hoch...")
     for i in tqdm(range(0, len(vectors), BATCH_SIZE), desc="Pinecone Upsert"):
         batch = vectors[i:i + BATCH_SIZE]
         pinecone_index.upsert(vectors=batch)
 
-    print(f"✅ Alle {len(vectors)} Chunks erfolgreich in Pinecone gespeichert!")
+    print(f"Alle {len(vectors)} Chunks erfolgreich in Pinecone gespeichert!")
 
 
 # ─────────────────────────────────────────────
 # 8. SCHNELLTEST: RETRIEVAL PRÜFEN
 # ─────────────────────────────────────────────
 def test_retrieval(pinecone_index, embed_model: OpenAIEmbedding, top_k: int = 3):
-    print("\n🔍 Schnelltest: Retrieval...")
+    print("\nSchnelltest: Retrieval...")
 
     test_queries = [
         "Wann wurde Bayern München gegründet?",
@@ -371,13 +371,13 @@ def test_retrieval(pinecone_index, embed_model: OpenAIEmbedding, top_k: int = 3)
 if __name__ == "__main__":
     if not OPENAI_API_KEY or not PINECONE_API_KEY:
         raise ValueError(
-            "❌ API Keys fehlen! Bitte OPENAI_API_KEY und PINECONE_API_KEY "
+            "API Keys fehlen! Bitte OPENAI_API_KEY und PINECONE_API_KEY "
             "in der .env Datei setzen."
         )
 
     if not Path(TEAMS_FILE).exists():
         raise FileNotFoundError(
-            f"❌ '{TEAMS_FILE}' nicht gefunden! "
+            f"'{TEAMS_FILE}' nicht gefunden! "
             "Bitte zuerst wikipedia_collector.py ausführen."
         )
 
@@ -388,4 +388,4 @@ if __name__ == "__main__":
     embed_and_upload(chunks, pinecone_index, embed_model)
     test_retrieval(pinecone_index, embed_model)
 
-    print("\n🎉 Fertig! Pinecone Index ist bereit für den Wikipedia-Agenten.")
+    print("\nFertig! Pinecone Index ist bereit für den Wikipedia-Agenten.")

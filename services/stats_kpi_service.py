@@ -131,13 +131,14 @@ def _load_statsbomb_kpis_from_summary_table(conn: sqlite3.Connection, team_name:
         "Tore": row[4],
         "xG": row[2],
         "xG pro Spiel": row[3],
+        "Chancenverwertung": round(float(row[4]) - float(row[2]), 1) if row[4] is not None and row[2] is not None else None,
         "Spiele": row[5],
     }
 
 
 def load_statsbomb_kpis_from_db(team_name: str, saison_label: str, liga: str, db_path: Path | None = None) -> dict | None:
     """Aggregiert xG und Tore aus soccer.db via SQL."""
-    # Erst versuchen wir die direkten Event-Tabellen, danach den Summary-Fallback.
+    # Erst versucht man die direkten Event-Tabellen, danach den Summary-Fallback.
     if not _statsbomb_filter_supported(liga):
         return None
 
@@ -210,14 +211,17 @@ def load_statsbomb_kpis_from_db(team_name: str, saison_label: str, liga: str, db
             return _load_statsbomb_kpis_from_summary_table(conn, team_name, saison_label)
 
     match_count = int(row["spiele"] or 0)
+    xg_total = round(float(row["xg_summe"]), 1)
     xg_per_match = round(float(row["xg_summe"]) / match_count, 2) if match_count else None
+    chancenverwertung = round(float(row["tore"]) - float(row["xg_summe"]), 1)
 
     return {
         "team": team_name,
         "statsbomb_team": statsbomb_team,
         "Tore": int(row["tore"]),
-        "xG": round(float(row["xg_summe"]), 1),
+        "xG": xg_total,
         "xG pro Spiel": xg_per_match,
+        "Chancenverwertung": chancenverwertung,
         "Spiele": match_count,
     }
 
